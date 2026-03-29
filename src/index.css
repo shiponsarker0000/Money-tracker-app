@@ -1,0 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-script: "Dancing Script", cursive;
+  --color-app-bg: var(--theme-bg, #FDFDF0);
+  --color-app-green: var(--theme-primary, #1B4332);
+  --color-app-light-green: var(--theme-secondary, #E9E9D0);
+  --color-app-text: var(--theme-primary, #1B4332);
+}
+
+:root {
+  --theme-bg: #FDFDF0;
+  --theme-primary: #1B4332;
+  --theme-secondary: #E9E9D0;
+  --theme-accent: #2D6A4F;
+}
+
+.dark {
+  --theme-bg: #0F172A;
+  --theme-primary: #F8FAFC;
+  --theme-secondary: #1E293B;
+  --theme-accent: #38BDF8;
+}
+
+body {
+  background-color: var(--theme-bg);
+  color: var(--theme-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--theme-secondary);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-accent);
+}

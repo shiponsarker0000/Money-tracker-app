@@ -1,0 +1,5 @@
+{
+  "name": "Expense Tracker (Offline Encrypted Backup)",
+  "description": "An expense tracker with manual offline encrypted backup and restore functionality.",
+  "requestFramePermissions": []
+}
