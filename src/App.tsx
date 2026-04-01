@@ -23,8 +23,13 @@ import {
   Mail,
   X,
   ShieldCheck,
+  Check,
+  Delete,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  Calendar,
+  Clock,
+  Save
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LineChart, Line, AreaChart, Area } from 'recharts';
@@ -157,8 +162,17 @@ export default function App() {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<Theme>(THEMES[0]);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Calculator and Selector States
+  const [calculatorInput, setCalculatorInput] = useState('0');
+  const [isAccountSelectorOpen, setIsAccountSelectorOpen] = useState(false);
+  const [isCategorySelectorOpen, setIsCategorySelectorOpen] = useState(false);
+  const [isToAccountSelectorOpen, setIsToAccountSelectorOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
   
   // New Settings States
   const [currencySymbol, setCurrencySymbol] = useState('₹');
@@ -167,10 +181,178 @@ export default function App() {
   const [uiMode, setUiMode] = useState<'system' | 'light' | 'dark'>('system');
   const [passcode, setPasscode] = useState<string | null>(null);
   const [isLocked, setIsLocked] = useState(false);
+  const [securityEnabled, setSecurityEnabled] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [isPasscodeModalOpen, setIsPasscodeModalOpen] = useState(false);
+  const [isPasscodeSetupOpen, setIsPasscodeSetupOpen] = useState(false);
+  const [passcodeSetupMode, setPasscodeSetupMode] = useState<'set' | 'disable'>('set');
+  const [passcodeSetupStep, setPasscodeSetupStep] = useState<1 | 2>(1);
+  const [tempPasscode, setTempPasscode] = useState('');
   const [passcodeAttempt, setPasscodeAttempt] = useState('');
-  
+  const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
+  const [currencySearchQuery, setCurrencySearchQuery] = useState('');
+
+  // Currency List (Common Currencies)
+  const CURRENCIES = [
+    { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+    { code: 'BDT', symbol: '৳', name: 'Bangladeshi Taka' },
+    { code: 'USD', symbol: '$', name: 'US Dollar' },
+    { code: 'EUR', symbol: '€', name: 'Euro' },
+    { code: 'GBP', symbol: '£', name: 'British Pound' },
+    { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+    { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
+    { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+    { code: 'CHF', symbol: 'Fr', name: 'Swiss Franc' },
+    { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
+    { code: 'HKD', symbol: 'HK$', name: 'Hong Kong Dollar' },
+    { code: 'NZD', symbol: 'NZ$', name: 'New Zealand Dollar' },
+    { code: 'SEK', symbol: 'kr', name: 'Swedish Krona' },
+    { code: 'KRW', symbol: '₩', name: 'South Korean Won' },
+    { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' },
+    { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone' },
+    { code: 'MXN', symbol: 'Mex$', name: 'Mexican Peso' },
+    { code: 'RUB', symbol: '₽', name: 'Russian Ruble' },
+    { code: 'ZAR', symbol: 'R', name: 'South African Rand' },
+    { code: 'TRY', symbol: '₺', name: 'Turkish Lira' },
+    { code: 'BRL', symbol: 'R$', name: 'Brazilian Real' },
+    { code: 'TWD', symbol: 'NT$', name: 'Taiwan New Dollar' },
+    { code: 'DKK', symbol: 'kr', name: 'Danish Krone' },
+    { code: 'PLN', symbol: 'zł', name: 'Polish Zloty' },
+    { code: 'THB', symbol: '฿', name: 'Thai Baht' },
+    { code: 'IDR', symbol: 'Rp', name: 'Indonesian Rupiah' },
+    { code: 'HUF', symbol: 'Ft', name: 'Hungarian Forint' },
+    { code: 'CZK', symbol: 'Kč', name: 'Czech Koruna' },
+    { code: 'ILS', symbol: '₪', name: 'Israeli Shekel' },
+    { code: 'CLP', symbol: 'CLP$', name: 'Chilean Peso' },
+    { code: 'PHP', symbol: '₱', name: 'Philippine Peso' },
+    { code: 'AED', symbol: 'DH', name: 'UAE Dirham' },
+    { code: 'COP', symbol: 'COL$', name: 'Colombian Peso' },
+    { code: 'SAR', symbol: 'SR', name: 'Saudi Riyal' },
+    { code: 'MYR', symbol: 'RM', name: 'Malaysian Ringgit' },
+    { code: 'RON', symbol: 'L', name: 'Romanian Leu' },
+    { code: 'VND', symbol: '₫', name: 'Vietnamese Dong' },
+    { code: 'ARS', symbol: 'ARS$', name: 'Argentine Peso' },
+    { code: 'IQD', symbol: 'ID', name: 'Iraqi Dinar' },
+    { code: 'KWD', symbol: 'KD', name: 'Kuwaiti Dinar' },
+    { code: 'QAR', symbol: 'QR', name: 'Qatari Rial' },
+    { code: 'EGP', symbol: 'E£', name: 'Egyptian Pound' },
+    { code: 'PKR', symbol: 'Rs', name: 'Pakistani Rupee' },
+    { code: 'NGN', symbol: '₦', name: 'Nigerian Naira' },
+    { code: 'LKR', symbol: 'Rs', name: 'Sri Lankan Rupee' },
+    { code: 'DZD', symbol: 'DA', name: 'Algerian Dinar' },
+    { code: 'MAD', symbol: 'DH', name: 'Moroccan Dirham' },
+    { code: 'KES', symbol: 'KSh', name: 'Kenyan Shilling' },
+    { code: 'GHS', symbol: 'GH₵', name: 'Ghanaian Cedi' },
+    { code: 'UGX', symbol: 'USh', name: 'Ugandan Shilling' },
+    { code: 'TZS', symbol: 'TSh', name: 'Tanzanian Shilling' },
+    { code: 'ETB', symbol: 'Br', name: 'Ethiopian Birr' },
+    { code: 'AFN', symbol: '؋', name: 'Afghan Afghani' },
+    { code: 'ALL', symbol: 'L', name: 'Albanian Lek' },
+    { code: 'AMD', symbol: '֏', name: 'Armenian Dram' },
+    { code: 'ANG', symbol: 'ƒ', name: 'Netherlands Antillean Guilder' },
+    { code: 'AOA', symbol: 'Kz', name: 'Angolan Kwanza' },
+    { code: 'AWG', symbol: 'ƒ', name: 'Aruban Florin' },
+    { code: 'AZN', symbol: '₼', name: 'Azerbaijani Manat' },
+    { code: 'BAM', symbol: 'KM', name: 'Bosnia-Herzegovina Convertible Mark' },
+    { code: 'BBD', symbol: 'Bds$', name: 'Barbadian Dollar' },
+    { code: 'BGN', symbol: 'лв', name: 'Bulgarian Lev' },
+    { code: 'BHD', symbol: 'BD', name: 'Bahraini Dinar' },
+    { code: 'BIF', symbol: 'FBu', name: 'Burundian Franc' },
+    { code: 'BMD', symbol: 'BD$', name: 'Bermudian Dollar' },
+    { code: 'BND', symbol: 'B$', name: 'Brunei Dollar' },
+    { code: 'BOB', symbol: 'Bs.', name: 'Bolivian Boliviano' },
+    { code: 'BSD', symbol: 'B$', name: 'Bahamian Dollar' },
+    { code: 'BTN', symbol: 'Nu.', name: 'Bhutanese Ngultrum' },
+    { code: 'BWP', symbol: 'P', name: 'Botswanan Pula' },
+    { code: 'BYN', symbol: 'Br', name: 'Belarusian Ruble' },
+    { code: 'BZE', symbol: 'BZ$', name: 'Belize Dollar' },
+    { code: 'CDF', symbol: 'FC', name: 'Congolese Franc' },
+    { code: 'CRC', symbol: '₡', name: 'Costa Rican Colón' },
+    { code: 'CUP', symbol: '$MN', name: 'Cuban Peso' },
+    { code: 'CVE', symbol: 'Esc', name: 'Cape Verdean Escudo' },
+    { code: 'DJF', symbol: 'Fdj', name: 'Djiboutian Franc' },
+    { code: 'DOP', symbol: 'RD$', name: 'Dominican Peso' },
+    { code: 'ERN', symbol: 'Nfk', name: 'Eritrean Nakfa' },
+    { code: 'FJD', symbol: 'FJ$', name: 'Fijian Dollar' },
+    { code: 'FKP', symbol: '£', name: 'Falkland Islands Pound' },
+    { code: 'GEL', symbol: '₾', name: 'Georgian Lari' },
+    { code: 'GIP', symbol: '£', name: 'Gibraltar Pound' },
+    { code: 'GMD', symbol: 'D', name: 'Gambian Dalasi' },
+    { code: 'GNF', symbol: 'FG', name: 'Guinean Franc' },
+    { code: 'GTQ', symbol: 'Q', name: 'Guatemalan Quetzal' },
+    { code: 'GYD', symbol: 'GY$', name: 'Guyanese Dollar' },
+    { code: 'HNL', symbol: 'L', name: 'Honduran Lempira' },
+    { code: 'HRK', symbol: 'kn', name: 'Croatian Kuna' },
+    { code: 'HTG', symbol: 'G', name: 'Haitian Gourde' },
+    { code: 'ISK', symbol: 'kr', name: 'Icelandic Króna' },
+    { code: 'JMD', symbol: 'J$', name: 'Jamaican Dollar' },
+    { code: 'JOD', symbol: 'JD', name: 'Jordanian Dinar' },
+    { code: 'KGS', symbol: 'лв', name: 'Kyrgystani Som' },
+    { code: 'KHR', symbol: '៛', name: 'Cambodian Riel' },
+    { code: 'KMF', symbol: 'CF', name: 'Comorian Franc' },
+    { code: 'KYD', symbol: 'CI$', name: 'Cayman Islands Dollar' },
+    { code: 'KZT', symbol: '₸', name: 'Kazakhstani Tenge' },
+    { code: 'LAK', symbol: '₭', name: 'Laotian Kip' },
+    { code: 'LBP', symbol: 'L£', name: 'Lebanese Pound' },
+    { code: 'LRD', symbol: 'L$', name: 'Liberian Dollar' },
+    { code: 'LSL', symbol: 'L', name: 'Lesotho Loti' },
+    { code: 'LYD', symbol: 'LD', name: 'Libyan Dinar' },
+    { code: 'MDL', symbol: 'L', name: 'Moldovan Leu' },
+    { code: 'MGA', symbol: 'Ar', name: 'Malagasy Ariary' },
+    { code: 'MKD', symbol: 'ден', name: 'Macedonian Denar' },
+    { code: 'MMK', symbol: 'K', name: 'Myanmar Kyat' },
+    { code: 'MNT', symbol: '₮', name: 'Mongolian Tugrik' },
+    { code: 'MOP', symbol: 'MOP$', name: 'Macanese Pataca' },
+    { code: 'MRU', symbol: 'UM', name: 'Mauritanian Ouguiya' },
+    { code: 'MUR', symbol: 'Rs', name: 'Mauritian Rupee' },
+    { code: 'MVR', symbol: 'Rf', name: 'Maldivian Rufiyaa' },
+    { code: 'MWK', symbol: 'MK', name: 'Malawian Kwacha' },
+    { code: 'MZN', symbol: 'MT', name: 'Mozambican Metical' },
+    { code: 'NAD', symbol: 'N$', name: 'Namibian Dollar' },
+    { code: 'NIO', symbol: 'C$', name: 'Nicaraguan Córdoba' },
+    { code: 'NPR', symbol: 'Rs', name: 'Nepalese Rupee' },
+    { code: 'OMR', symbol: 'RO', name: 'Omani Rial' },
+    { code: 'PAB', symbol: 'B/.', name: 'Panamanian Balboa' },
+    { code: 'PEN', symbol: 'S/.', name: 'Peruvian Sol' },
+    { code: 'PGK', symbol: 'K', name: 'Papua New Guinean Kina' },
+    { code: 'PYG', symbol: 'Gs', name: 'Paraguayan Guarani' },
+    { code: 'RWF', symbol: 'RF', name: 'Rwandan Franc' },
+    { code: 'SBD', symbol: 'SI$', name: 'Solomon Islands Dollar' },
+    { code: 'SCR', symbol: 'Rs', name: 'Seychellois Rupee' },
+    { code: 'SDG', symbol: 'S£', name: 'Sudanese Pound' },
+    { code: 'SHP', symbol: '£', name: 'Saint Helena Pound' },
+    { code: 'SLL', symbol: 'Le', name: 'Sierra Leonean Leone' },
+    { code: 'SOS', symbol: 'S', name: 'Somali Shilling' },
+    { code: 'SRD', symbol: 'Sr$', name: 'Surinamese Dollar' },
+    { code: 'SSP', symbol: '£', name: 'South Sudanese Pound' },
+    { code: 'STN', symbol: 'Db', name: 'São Tomé & Príncipe Dobra' },
+    { code: 'SYP', symbol: '£', name: 'Syrian Pound' },
+    { code: 'SZL', symbol: 'L', name: 'Swazi Lilangeni' },
+    { code: 'TJS', symbol: 'SM', name: 'Tajikistani Somoni' },
+    { code: 'TMT', symbol: 'T', name: 'Turkmenistani Manat' },
+    { code: 'TND', symbol: 'DT', name: 'Tunisian Dinar' },
+    { code: 'TOP', symbol: 'T$', name: 'Tongan Paʻanga' },
+    { code: 'TTD', symbol: 'TT$', name: 'Trinidad & Tobago Dollar' },
+    { code: 'UAH', symbol: '₴', name: 'Ukrainian Hryvnia' },
+    { code: 'UYU', symbol: '$U', name: 'Uruguayan Peso' },
+    { code: 'UZS', symbol: 'лв', name: 'Uzbekistani Som' },
+    { code: 'VES', symbol: 'Bs.S', name: 'Venezuelan Bolívar' },
+    { code: 'VUV', symbol: 'VT', name: 'Vanuatu Vatu' },
+    { code: 'WST', symbol: 'WS$', name: 'Samoan Tala' },
+    { code: 'XAF', symbol: 'FCFA', name: 'Central African CFA Franc' },
+    { code: 'XCD', symbol: 'EC$', name: 'East Caribbean Dollar' },
+    { code: 'XOF', symbol: 'CFA', name: 'West African CFA Franc' },
+    { code: 'XPF', symbol: 'CFP', name: 'CFP Franc' },
+    { code: 'YER', symbol: '﷼', name: 'Yemeni Rial' },
+    { code: 'ZMW', symbol: 'ZK', name: 'Zambian Kwacha' },
+    { code: 'ZWL', symbol: '$', name: 'Zimbabwean Dollar' },
+  ];
+
+  const filteredCurrencies = CURRENCIES.filter(c => 
+    c.name.toLowerCase().includes(currencySearchQuery.toLowerCase()) || 
+    c.code.toLowerCase().includes(currencySearchQuery.toLowerCase()) ||
+    c.symbol.includes(currencySearchQuery)
+  );
   const [viewMode, setViewMode] = useState<'Daily' | 'Weekly' | 'Monthly' | '3month' | '6month' | 'Year'>('Monthly');
   const [analysisMode, setAnalysisMode] = useState<'Expense overview' | 'Income overview' | 'Expense flow' | 'Income flow' | 'Account analysis'>('Expense overview');
   const [showTotal, setShowTotal] = useState(true);
@@ -262,10 +444,14 @@ export default function App() {
     if (savedDecimals) setDecimalPlaces(Number(savedDecimals));
 
     const savedPasscode = localStorage.getItem('mymoney_passcode');
-    if (savedPasscode) {
+    const savedSecurity = localStorage.getItem('mymoney_security_enabled');
+    if (savedSecurity === 'true' && savedPasscode && savedPasscode !== 'null' && savedPasscode.length >= 4) {
       setPasscode(savedPasscode);
+      setSecurityEnabled(true);
       setIsLocked(true);
       setIsPasscodeModalOpen(true);
+    } else if (savedPasscode) {
+      setPasscode(savedPasscode);
     }
 
     const savedReminder = localStorage.getItem('mymoney_reminder');
@@ -326,6 +512,47 @@ export default function App() {
     return `${formatted}${currencySymbol}`;
   };
 
+  // Notification Logic
+  useEffect(() => {
+    if (!reminderEnabled) return;
+
+    const checkReminders = () => {
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      
+      // 10:00 AM, 2:30 PM (14:30), 8:00 PM (20:00)
+      const reminderTimes = [
+        { h: 10, m: 0 },
+        { h: 14, m: 30 },
+        { h: 20, m: 0 }
+      ];
+
+      const isReminderTime = reminderTimes.some(t => t.h === hours && t.m === minutes);
+      
+      if (isReminderTime) {
+        // Show toast notification
+        showNotification("Time to add your daily expenses! 💸", "success");
+        
+        // Also try browser notification if permitted
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("MyMoney Reminder", {
+            body: "Don't forget to record your expenses for today!",
+            icon: "/favicon.ico"
+          });
+        }
+      }
+    };
+
+    // Request permission on enable
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
+    const interval = setInterval(checkReminders, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [reminderEnabled]);
+
   useEffect(() => {
     localStorage.setItem('mymoney_data', JSON.stringify(expenses));
   }, [expenses]);
@@ -346,6 +573,38 @@ export default function App() {
     localStorage.setItem('mymoney_budgets', JSON.stringify(budgets));
   }, [budgets]);
 
+  useEffect(() => {
+    localStorage.setItem('mymoney_currency', currencySymbol);
+  }, [currencySymbol]);
+
+  useEffect(() => {
+    localStorage.setItem('mymoney_currency_pos', currencyPosition);
+  }, [currencyPosition]);
+
+  useEffect(() => {
+    localStorage.setItem('mymoney_decimals', String(decimalPlaces));
+  }, [decimalPlaces]);
+
+  useEffect(() => {
+    localStorage.setItem('mymoney_ui_mode', uiMode);
+  }, [uiMode]);
+
+  useEffect(() => {
+    if (passcode === null) {
+      localStorage.removeItem('mymoney_passcode');
+    } else {
+      localStorage.setItem('mymoney_passcode', passcode);
+    }
+  }, [passcode]);
+
+  useEffect(() => {
+    localStorage.setItem('mymoney_security_enabled', String(securityEnabled));
+  }, [securityEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('mymoney_reminder', String(reminderEnabled));
+  }, [reminderEnabled]);
+
   // Update account balances based on expenses
   const getAccountBalance = (accountName: string) => {
     const account = accounts.find(a => a.name === accountName);
@@ -356,6 +615,48 @@ export default function App() {
     const expense = relevantExpenses.filter(e => (e.type === 'expense' && e.account === accountName) || (e.type === 'transfer' && e.account === accountName)).reduce((acc, curr) => acc + curr.amount, 0);
     
     return account.initial + income - expense;
+  };
+
+  const handleCalculatorClick = (value: string) => {
+    if (value === 'back') {
+      if (calculatorInput.length === 1) {
+        setCalculatorInput('0');
+        setNewExpense(prev => ({ ...prev, amount: 0 }));
+      } else {
+        const newVal = calculatorInput.slice(0, -1);
+        setCalculatorInput(newVal);
+        try {
+          const result = eval(newVal.replace(/×/g, '*').replace(/÷/g, '/'));
+          if (!isNaN(result) && isFinite(result)) {
+            setNewExpense(prev => ({ ...prev, amount: Number(result) || 0 }));
+          }
+        } catch { /* incomplete expression */ }
+      }
+      return;
+    }
+    if (value === '=') {
+      try {
+        const result = eval(calculatorInput.replace(/×/g, '*').replace(/÷/g, '/'));
+        if (!isNaN(result) && isFinite(result)) {
+          setCalculatorInput(String(result));
+          setNewExpense(prev => ({ ...prev, amount: Number(result) || 0 }));
+        }
+      } catch {
+        showNotification('Invalid expression', 'error');
+      }
+      return;
+    }
+    
+    setCalculatorInput(prev => {
+      const next = prev === '0' && !['+', '-', '×', '÷', '.'].includes(value) ? value : prev + value;
+      try {
+        const result = eval(next.replace(/×/g, '*').replace(/÷/g, '/'));
+        if (!isNaN(result) && isFinite(result)) {
+          setNewExpense(prevExp => ({ ...prevExp, amount: Number(result) || 0 }));
+        }
+      } catch { /* incomplete expression */ }
+      return next;
+    });
   };
 
   const handleAddExpense = () => {
@@ -396,6 +697,7 @@ export default function App() {
     }
 
     setIsAddModalOpen(false);
+    setCalculatorInput('0');
     setNewExpense({
       amount: 0,
       type: 'expense',
@@ -546,6 +848,7 @@ export default function App() {
 
   const handleEditClick = (expense: Expense) => {
     setNewExpense(expense);
+    setCalculatorInput(String(expense.amount));
     setIsDetailsModalOpen(false);
     setIsAddModalOpen(true);
   };
@@ -558,7 +861,23 @@ export default function App() {
   };
 
   const handleBackup = () => {
-    const dataString = JSON.stringify(expenses);
+    const data = {
+      expenses,
+      accounts,
+      incomeCategories,
+      expenseCategories,
+      budgets,
+      settings: {
+        currencySymbol,
+        currencyPosition,
+        decimalPlaces,
+        uiMode,
+        passcode,
+        reminderEnabled,
+        currentThemeId: currentTheme.id
+      }
+    };
+    const dataString = JSON.stringify(data);
     const encrypted = CryptoJS.AES.encrypt(dataString, ENCRYPTION_KEY).toString();
     const blob = new Blob([encrypted], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -570,7 +889,41 @@ export default function App() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     setIsSidebarOpen(false);
-    showNotification('Backup downloaded successfully!');
+    showNotification('Full backup downloaded successfully!');
+  };
+
+  const handleExportCSV = () => {
+    if (expenses.length === 0) {
+      showNotification('No records to export.', 'error');
+      return;
+    }
+
+    const headers = ['Date', 'Time', 'Type', 'Category', 'Account', 'Amount', 'Note', 'Description'];
+    const csvContent = [
+      headers.join(','),
+      ...expenses.map(e => [
+        e.date,
+        e.time,
+        e.type,
+        e.category,
+        e.account,
+        e.amount,
+        `"${(e.note || '').replace(/"/g, '""')}"`,
+        `"${(e.description || '').replace(/"/g, '""')}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mymoney_records_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setIsSidebarOpen(false);
+    showNotification('Records exported to CSV successfully!');
   };
 
   const handleRestore = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -584,9 +937,33 @@ export default function App() {
         const bytes = CryptoJS.AES.decrypt(content, ENCRYPTION_KEY);
         const decryptedData = bytes.toString(CryptoJS.enc.Utf8);
         const parsed = JSON.parse(decryptedData);
-        if (Array.isArray(parsed)) {
+        
+        if (parsed.expenses && Array.isArray(parsed.expenses)) {
+          setExpenses(parsed.expenses);
+          if (parsed.accounts) setAccounts(parsed.accounts);
+          if (parsed.incomeCategories) setIncomeCategories(parsed.incomeCategories);
+          if (parsed.expenseCategories) setExpenseCategories(parsed.expenseCategories);
+          if (parsed.budgets) setBudgets(parsed.budgets);
+          
+          if (parsed.settings) {
+            const s = parsed.settings;
+            if (s.currencySymbol) setCurrencySymbol(s.currencySymbol);
+            if (s.currencyPosition) setCurrencyPosition(s.currencyPosition);
+            if (s.decimalPlaces !== undefined) setDecimalPlaces(s.decimalPlaces);
+            if (s.uiMode) setUiMode(s.uiMode);
+            if (s.passcode) setPasscode(s.passcode);
+            if (s.reminderEnabled !== undefined) setReminderEnabled(s.reminderEnabled);
+            if (s.currentThemeId) {
+              const found = THEMES.find(t => t.id === s.currentThemeId);
+              if (found) setCurrentTheme(found);
+            }
+          }
+          
+          showNotification('All data restored successfully!');
+        } else if (Array.isArray(parsed)) {
+          // Fallback for old backup format which was just an array of expenses
           setExpenses(parsed);
-          showNotification('Data restored successfully!');
+          showNotification('Records restored successfully!');
         } else {
           throw new Error('Invalid data format');
         }
@@ -717,90 +1094,98 @@ export default function App() {
   return (
     <div className="min-h-screen bg-app-bg text-app-green font-sans pb-20 overflow-x-hidden">
       {/* Header */}
-      <header className="px-4 py-3 flex justify-between items-center bg-[#FDFDF0] sticky top-0 z-30">
-        {!isSearchOpen ? (
-          <>
-            <button onClick={() => setIsSidebarOpen(true)} className="p-1">
-              <Menu className="w-6 h-6" />
-            </button>
-            <h1 className="text-2xl font-script font-bold text-center flex-1">MyMoney</h1>
-            <button onClick={() => setIsSearchOpen(true)} className="p-1">
-              <Search className="w-6 h-6" />
-            </button>
-          </>
-        ) : (
-          <div className="flex items-center gap-2 w-full">
-            <button onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }} className="p-1">
-              <ArrowLeft className="w-6 h-6" />
-            </button>
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
-              <input 
-                type="text" 
-                placeholder="Search note..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-app-green/5 border border-app-green/10 rounded-xl pl-10 pr-10 py-2 text-sm focus:ring-1 focus:ring-app-green/20 outline-none"
-                autoFocus
-              />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 opacity-40 hover:opacity-100"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+      {!isLocked && (
+        <header className="px-4 py-3 flex justify-between items-center bg-[#FDFDF0] sticky top-0 z-30">
+          {!isSearchOpen ? (
+            <>
+              <button onClick={() => setIsSidebarOpen(true)} className="p-1">
+                <Menu className="w-6 h-6" />
+              </button>
+              <h1 className="text-2xl font-script font-bold text-center flex-1">MyMoney</h1>
+              <button onClick={() => setIsSearchOpen(true)} className="p-1">
+                <Search className="w-6 h-6" />
+              </button>
+            </>
+          ) : (
+            <div className="flex items-center gap-2 w-full">
+              <button onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }} className="p-1">
+                <ArrowLeft className="w-6 h-6" />
+              </button>
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
+                <input 
+                  type="text" 
+                  placeholder="Search note..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-app-green/5 border border-app-green/10 rounded-xl pl-10 pr-10 py-2 text-sm focus:ring-1 focus:ring-app-green/20 outline-none"
+                  autoFocus
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 opacity-40 hover:opacity-100"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-      </header>
+          )}
+        </header>
+      )}
 
       {/* Sidebar Drawer */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsSidebarOpen(false)}
-              className="fixed inset-0 bg-black/30 z-40 backdrop-blur-[1px]"
-            />
-            <motion.div 
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-72 bg-app-bg z-50 shadow-2xl flex flex-col"
-            >
-              <div className="p-6 border-b border-[#1B4332]/10">
-                <h2 className="text-xl font-script font-bold">MyMoney</h2>
-                <p className="text-[10px] opacity-50">4.4-free</p>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto py-4">
-                <SidebarItem icon={<SettingsIcon className="w-5 h-5" />} label="Preferences" onClick={() => { setIsPreferencesOpen(true); setIsSidebarOpen(false); }} />
-                
-                <div className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider opacity-40 mt-2">Management</div>
-                <SidebarItem icon={<Download className="w-5 h-5" />} label="Export records" />
-                <div className="relative">
-                  <SidebarItem icon={<Upload className="w-5 h-5" />} label="Backup & Restore" onClick={handleBackup} />
-                  <label className="absolute inset-0 cursor-pointer opacity-0">
-                    <input type="file" accept=".enc" onChange={handleRestore} className="hidden" />
-                  </label>
+      {!isLocked && (
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsSidebarOpen(false)}
+                className="fixed inset-0 bg-black/30 z-40 backdrop-blur-[1px]"
+              />
+              <motion.div 
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed inset-y-0 left-0 w-72 bg-app-bg z-50 shadow-2xl flex flex-col"
+              >
+                <div className="p-6 border-b border-[#1B4332]/10">
+                  <h2 className="text-xl font-script font-bold">MyMoney</h2>
+                  <p className="text-[10px] opacity-50">4.4-free</p>
                 </div>
-                <SidebarItem icon={<Trash2 className="w-5 h-5" />} label="Delete & Reset" onClick={() => { setExpenses([]); setIsSidebarOpen(false); showNotification('All data reset.'); }} />
+                
+                <div className="flex-1 overflow-y-auto py-4">
+                  <SidebarItem icon={<SettingsIcon className="w-5 h-5" />} label="Preferences" onClick={() => { setIsPreferencesOpen(true); setIsSidebarOpen(false); }} />
+                  
+                  <div className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider opacity-40 mt-2">Management</div>
+                  <SidebarItem icon={<Download className="w-5 h-5" />} label="Export records (CSV)" onClick={handleExportCSV} />
+                  <SidebarItem icon={<Save className="w-5 h-5" />} label="Backup Data" onClick={handleBackup} />
+                  <div className="relative">
+                    <SidebarItem icon={<Upload className="w-5 h-5" />} label="Restore Data" />
+                    <label className="absolute inset-0 cursor-pointer opacity-0">
+                      <input type="file" accept=".enc" onChange={handleRestore} className="hidden" />
+                    </label>
+                  </div>
+                  <SidebarItem icon={<Trash2 className="w-5 h-5" />} label="Delete & Reset" onClick={() => { 
+                    setIsResetModalOpen(true);
+                    setIsSidebarOpen(false);
+                  }} />
 
-                <div className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider opacity-40 mt-2">Application</div>
-                <SidebarItem icon={<Star className="w-5 h-5 text-yellow-600" />} label="Themes (Pro)" onClick={() => { setIsThemeModalOpen(true); setIsSidebarOpen(false); }} />
-                <SidebarItem icon={<ThumbsUp className="w-5 h-5" />} label="Like MyMoney" />
-                <SidebarItem icon={<Mail className="w-5 h-5" />} label="Feedback" />
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+                  <div className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider opacity-40 mt-2">Application</div>
+                  <SidebarItem icon={<Star className="w-5 h-5 text-yellow-600" />} label="Themes (Pro)" onClick={() => { setIsThemeModalOpen(true); setIsSidebarOpen(false); }} />
+                  <SidebarItem icon={<ThumbsUp className="w-5 h-5" />} label="Like MyMoney" />
+                  <SidebarItem icon={<Mail className="w-5 h-5" />} label="Feedback" />
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      )}
 
       {/* Preferences Page */}
       <AnimatePresence>
@@ -838,23 +1223,21 @@ export default function App() {
                 </div>
               </SettingsSection>
               <SettingsSection title="Currency sign">
-                <div className="grid grid-cols-4 gap-2">
-                  {['₹', '৳', '$', '€'].map(symbol => (
-                    <button 
-                      key={symbol}
-                      onClick={() => {
-                        setCurrencySymbol(symbol);
-                        localStorage.setItem('mymoney_currency', symbol);
-                      }}
-                      className={cn(
-                        "py-2 rounded-lg text-sm font-bold transition-all",
-                        currencySymbol === symbol ? "bg-app-green text-white" : "bg-app-green/5"
-                      )}
-                    >
-                      {symbol}
-                    </button>
-                  ))}
-                </div>
+                <button 
+                  onClick={() => setIsCurrencyModalOpen(true)}
+                  className="w-full flex items-center justify-between p-4 bg-app-green/5 rounded-2xl hover:bg-app-green/10 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-lg shadow-sm border border-app-green/10">
+                      {currencySymbol}
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold">Select Currency</p>
+                      <p className="text-[10px] opacity-50">Choose from 150+ currencies</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 opacity-30" />
+                </button>
               </SettingsSection>
               <SettingsSection title="Currency position">
                 <div className="flex gap-2 p-1 bg-app-green/5 rounded-xl">
@@ -898,36 +1281,63 @@ export default function App() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-2">
                     <div>
-                      <p className="text-sm font-medium">Passcode protection (Pro)</p>
+                      <p className="text-sm font-medium">Passcode protection</p>
                       <p className="text-[10px] opacity-50">Requires a Passcode to enter app</p>
                     </div>
                     <button 
                       onClick={() => {
-                        if (passcode) {
-                          setPasscode(null);
-                          setIsLocked(false);
-                          localStorage.removeItem('mymoney_passcode');
+                        if (!passcode) {
+                          setPasscodeSetupMode('set');
+                          setPasscodeSetupStep(1);
+                          setPasscodeAttempt('');
+                          setTempPasscode('');
+                          setIsPasscodeSetupOpen(true);
                         } else {
-                          const code = prompt('Enter new 4-digit passcode:');
-                          if (code && code.length === 4) {
-                            setPasscode(code);
-                            localStorage.setItem('mymoney_passcode', code);
-                            showNotification('Passcode set successfully!');
-                          }
+                          setSecurityEnabled(!securityEnabled);
                         }
                       }}
                       className={cn(
                         "w-10 h-5 rounded-full relative transition-colors",
-                        passcode ? "bg-app-green" : "bg-gray-300"
+                        securityEnabled ? "bg-app-green" : "bg-gray-300"
                       )}
                     >
                       <div className={cn(
                         "absolute top-1 w-3 h-3 bg-white rounded-full transition-all",
-                        passcode ? "right-1" : "left-1"
+                        securityEnabled ? "right-1" : "left-1"
                       )} />
                     </button>
                   </div>
+                  {passcode && (
+                    <button 
+                      onClick={() => {
+                        setPasscodeSetupMode('disable');
+                        setPasscodeSetupStep(1);
+                        setPasscodeAttempt('');
+                        setIsPasscodeSetupOpen(true);
+                      }}
+                      className="text-xs font-bold text-red-600 uppercase tracking-wider"
+                    >
+                      Change or Remove Passcode
+                    </button>
+                  )}
                 </div>
+              </SettingsSection>
+              <SettingsSection title="Data Management">
+                <button 
+                  onClick={() => setIsResetModalOpen(true)}
+                  className="w-full flex items-center justify-between p-4 bg-red-50 rounded-2xl hover:bg-red-100 transition-colors text-red-700"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-lg shadow-sm border border-red-100">
+                      <Trash2 className="w-5 h-5" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold">Delete & Reset</p>
+                      <p className="text-[10px] opacity-50">Clear all data and settings</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 opacity-30" />
+                </button>
               </SettingsSection>
               <SettingsSection title="Notification">
                 <div className="flex justify-between items-center py-2">
@@ -954,7 +1364,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <main className="flex-1">
+      <main className={cn("flex-1", isLocked && "hidden")}>
         <AnimatePresence mode="wait">
           {activeTab === 'records' && (
             <motion.div key="records" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -1374,9 +1784,9 @@ export default function App() {
                 if (isAccount) {
                   // Account Analysis Grouped Bar Chart
                   const accountData = accounts.map(acc => {
-                    const accExpenses = filteredExpenses.filter(e => e.account === acc.name);
-                    const income = accExpenses.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
-                    const expense = accExpenses.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+                    const accExpenses = filteredExpenses.filter(e => e.account === acc.name || e.toAccount === acc.name);
+                    const income = accExpenses.filter(e => (e.type === 'income' && e.account === acc.name) || (e.type === 'transfer' && e.toAccount === acc.name)).reduce((sum, e) => sum + e.amount, 0);
+                    const expense = accExpenses.filter(e => (e.type === 'expense' && e.account === acc.name) || (e.type === 'transfer' && e.account === acc.name)).reduce((sum, e) => sum + e.amount, 0);
                     return {
                       name: acc.name,
                       income,
@@ -1851,49 +2261,53 @@ export default function App() {
       </main>
 
       {/* Floating Action Button */}
-      <button 
-        onClick={() => {
-          if (activeTab === 'categories') {
-            setEditingCategory(null);
-            setNewCategory({ 
-              name: '', 
-              icon: CATEGORY_ICONS[0], 
-              color: '', 
-              type: 'expense' 
-            });
-            setIsCategoryModalOpen(true);
-          } else if (activeTab === 'accounts') {
-            setEditingAccount(null);
-            setNewAccount({ 
-              name: '', 
-              initial: 0, 
-              icon: ACCOUNT_ICONS[0] 
-            });
-            setIsAccountModalOpen(true);
-          } else if (activeTab === 'budgets') {
-            setEditingBudget(null);
-            setNewBudget({ 
-              category: expenseCategories[0]?.name || '', 
-              amount: 0 
-            });
-            setIsBudgetModalOpen(true);
-          } else {
-            setIsAddModalOpen(true);
-          }
-        }}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-[#E9E9D0] border border-[#1B4332]/20 rounded-full flex items-center justify-center shadow-lg z-20 active:scale-95 transition-transform"
-      >
-        <Plus className="w-8 h-8" />
-      </button>
+      {!isLocked && (
+        <button 
+          onClick={() => {
+            if (activeTab === 'categories') {
+              setEditingCategory(null);
+              setNewCategory({ 
+                name: '', 
+                icon: CATEGORY_ICONS[0], 
+                color: '', 
+                type: 'expense' 
+              });
+              setIsCategoryModalOpen(true);
+            } else if (activeTab === 'accounts') {
+              setEditingAccount(null);
+              setNewAccount({ 
+                name: '', 
+                initial: 0, 
+                icon: ACCOUNT_ICONS[0] 
+              });
+              setIsAccountModalOpen(true);
+            } else if (activeTab === 'budgets') {
+              setEditingBudget(null);
+              setNewBudget({ 
+                category: expenseCategories[0]?.name || '', 
+                amount: 0 
+              });
+              setIsBudgetModalOpen(true);
+            } else {
+              setIsAddModalOpen(true);
+            }
+          }}
+          className="fixed bottom-24 right-6 w-14 h-14 bg-[#E9E9D0] border border-[#1B4332]/20 rounded-full flex items-center justify-center shadow-lg z-20 active:scale-95 transition-transform"
+        >
+          <Plus className="w-8 h-8" />
+        </button>
+      )}
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#FDFDF0] border-t border-[#1B4332]/10 px-2 py-2 z-30 flex justify-between items-center">
-        <NavButton active={activeTab === 'records'} onClick={() => setActiveTab('records')} icon={<FileText className="w-5 h-5" />} label="Records" />
-        <NavButton active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} icon={<PieChart className="w-5 h-5" />} label="Analysis" />
-        <NavButton active={activeTab === 'budgets'} onClick={() => setActiveTab('budgets')} icon={<Calculator className="w-5 h-5" />} label="Budgets" />
-        <NavButton active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} icon={<Wallet className="w-5 h-5" />} label="Accounts" />
-        <NavButton active={activeTab === 'categories'} onClick={() => setActiveTab('categories')} icon={<Tag className="w-5 h-5" />} label="Categories" />
-      </nav>
+      {!isLocked && (
+        <nav className="fixed bottom-0 left-0 right-0 bg-[#FDFDF0] border-t border-[#1B4332]/10 px-2 py-2 z-30 flex justify-between items-center">
+          <NavButton active={activeTab === 'records'} onClick={() => setActiveTab('records')} icon={<FileText className="w-5 h-5" />} label="Records" />
+          <NavButton active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} icon={<PieChart className="w-5 h-5" />} label="Analysis" />
+          <NavButton active={activeTab === 'budgets'} onClick={() => setActiveTab('budgets')} icon={<Calculator className="w-5 h-5" />} label="Budgets" />
+          <NavButton active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} icon={<Wallet className="w-5 h-5" />} label="Accounts" />
+          <NavButton active={activeTab === 'categories'} onClick={() => setActiveTab('categories')} icon={<Tag className="w-5 h-5" />} label="Categories" />
+        </nav>
+      )}
 
       {/* Notification Toast */}
       <AnimatePresence>
@@ -1916,63 +2330,284 @@ export default function App() {
       {/* Add Modal */}
       <AnimatePresence>
         {isAddModalOpen && (
-          <div className="fixed inset-0 z-[70] flex items-end justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddModalOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="relative w-full max-w-md bg-[#FDFDF0] rounded-t-[32px] p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+          <div className="fixed inset-0 z-[70] bg-[#FDFDF0] flex flex-col overflow-hidden">
+            <motion.div 
+              initial={{ y: '100%' }} 
+              animate={{ y: 0 }} 
+              exit={{ y: '100%' }}
+              className="flex flex-col h-full"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center px-4 py-4 shrink-0">
+                <button onClick={() => setIsAddModalOpen(false)} className="flex items-center gap-2 text-app-green font-bold text-sm uppercase tracking-wider">
+                  <X className="w-5 h-5" /> CANCEL
+                </button>
+                <button onClick={handleAddExpense} className="flex items-center gap-2 text-app-green font-bold text-sm uppercase tracking-wider">
+                  <Check className="w-5 h-5" /> SAVE
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex justify-center items-center gap-4 py-6 shrink-0">
+                {(['income', 'expense', 'transfer'] as const).map((type, idx) => (
+                  <React.Fragment key={type}>
+                    <button 
+                      onClick={() => setNewExpense({...newExpense, type: type, category: type === 'transfer' ? 'Transfer' : (type === 'income' ? incomeCategories[0]?.name : expenseCategories[0]?.name)})}
+                      className={cn(
+                        "flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] transition-all",
+                        newExpense.type === type ? "text-app-green" : "opacity-30"
+                      )}
+                    >
+                      {newExpense.type === type && <Check className="w-4 h-4" />}
+                      {type}
+                    </button>
+                    {idx < 2 && <span className="opacity-20 text-app-green">|</span>}
+                  </React.Fragment>
+                ))}
+              </div>
+
+              {/* Selectors */}
+              <div className="grid grid-cols-2 gap-4 px-4 mb-4 shrink-0">
+                <div className="space-y-1">
+                  <p className="text-center text-[10px] font-bold uppercase opacity-40 tracking-widest">Account</p>
+                  <button 
+                    onClick={() => setIsAccountSelectorOpen(true)}
+                    className="w-full flex items-center justify-center gap-3 p-4 bg-white border border-app-green/20 rounded-2xl shadow-sm active:scale-95 transition-transform"
+                  >
+                    <Wallet className="w-5 h-5 opacity-60" />
+                    <span className="text-sm font-bold truncate">{newExpense.account || 'Select'}</span>
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-center text-[10px] font-bold uppercase opacity-40 tracking-widest">
+                    {newExpense.type === 'transfer' ? 'To Account' : 'Category'}
+                  </p>
+                  <button 
+                    onClick={() => newExpense.type === 'transfer' ? setIsToAccountSelectorOpen(true) : setIsCategorySelectorOpen(true)}
+                    className="w-full flex items-center justify-center gap-3 p-4 bg-white border border-app-green/20 rounded-2xl shadow-sm active:scale-95 transition-transform"
+                  >
+                    {newExpense.type === 'transfer' ? <ArrowRight className="w-5 h-5 opacity-60" /> : <Tag className="w-5 h-5 opacity-60" />}
+                    <span className="text-sm font-bold truncate">
+                      {newExpense.type === 'transfer' ? (newExpense.toAccount || 'Select') : (newExpense.category || 'Select')}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="px-4 mb-4 flex-1 flex flex-col min-h-0">
+                <textarea 
+                  placeholder="Add notes"
+                  value={newExpense.note}
+                  onChange={(e) => setNewExpense({...newExpense, note: e.target.value})}
+                  className="w-full flex-1 bg-[#FFFBEB] border border-app-green/20 rounded-2xl p-4 text-sm focus:ring-0 outline-none resize-none shadow-inner"
+                />
+              </div>
+
+              {/* Amount Display */}
+              <div className="px-6 py-4 flex items-center justify-between gap-4 border-t border-app-green/10 bg-white shrink-0">
+                <div className="flex-1 text-right overflow-hidden">
+                  <div className="text-5xl font-bold text-app-green truncate">
+                    {calculatorInput}
+                  </div>
+                </div>
+                <button onClick={() => handleCalculatorClick('back')} className="p-2 active:scale-90 transition-transform">
+                  <Delete className="w-8 h-8 opacity-60" />
+                </button>
+              </div>
+
+              {/* Calculator Keypad */}
+              <div className="grid grid-cols-4 gap-[1px] bg-app-green/20 shrink-0 border-t border-app-green/10">
+                {[
+                  { label: '+', val: '+' }, { label: '7', val: '7' }, { label: '8', val: '8' }, { label: '9', val: '9' },
+                  { label: '-', val: '-' }, { label: '4', val: '4' }, { label: '5', val: '5' }, { label: '6', val: '6' },
+                  { label: '×', val: '×' }, { label: '1', val: '1' }, { label: '2', val: '2' }, { label: '3', val: '3' },
+                  { label: '÷', val: '÷' }, { label: '0', val: '0' }, { label: '.', val: '.' }, { label: '=', val: '=' }
+                ].map((btn, idx) => (
+                  <button 
+                    key={idx}
+                    onClick={() => handleCalculatorClick(btn.val)}
+                    className={cn(
+                      "h-16 text-xl font-bold transition-all active:bg-app-green/10",
+                      ['+', '-', '×', '÷'].includes(btn.val) || btn.val === '=' ? "bg-[#719686] text-white" : "bg-white text-app-green"
+                    )}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div className="flex border-t border-app-green/10 bg-white shrink-0">
+                <button 
+                  onClick={() => setIsDatePickerOpen(true)}
+                  className="flex-1 py-4 text-xs font-bold border-r border-app-green/10 uppercase tracking-widest opacity-60 flex items-center justify-center gap-2"
+                >
+                  <Calendar className="w-3 h-3" />
+                  {new Date(newExpense.date!).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </button>
+                <div className="w-[1px] bg-app-green/10" />
+                <button 
+                  onClick={() => setIsTimePickerOpen(true)}
+                  className="flex-1 py-4 text-xs font-bold uppercase tracking-widest opacity-60 flex items-center justify-center gap-2"
+                >
+                  <Clock className="w-3 h-3" />
+                  {newExpense.time}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Account Selector Modal */}
+      <AnimatePresence>
+        {isAccountSelectorOpen && (
+          <div className="fixed inset-0 z-[80] flex items-end justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAccountSelectorOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="relative w-full max-w-md bg-[#FDFDF0] rounded-t-[32px] p-6 shadow-2xl flex flex-col max-h-[70vh]">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">{newExpense.id ? 'Edit Record' : 'Add Record'}</h2>
-                <button onClick={() => setIsAddModalOpen(false)} className="p-2 bg-app-green/5 rounded-full"><X className="w-5 h-5" /></button>
+                <h2 className="text-xl font-bold">Select Account</h2>
+                <button onClick={() => setIsAccountSelectorOpen(false)} className="p-2 bg-app-green/5 rounded-full"><X className="w-5 h-5" /></button>
               </div>
-
-              <div className="space-y-4">
-                <div className="flex gap-2 p-1 bg-app-green/5 rounded-xl">
-                  <button onClick={() => setNewExpense({...newExpense, type: 'expense', category: expenseCategories[0]?.name || ''})} className={cn("flex-1 py-2 rounded-lg text-sm font-bold transition-all", newExpense.type === 'expense' ? "bg-white shadow-sm" : "opacity-50")}>Expense</button>
-                  <button onClick={() => setNewExpense({...newExpense, type: 'income', category: incomeCategories[0]?.name || ''})} className={cn("flex-1 py-2 rounded-lg text-sm font-bold transition-all", newExpense.type === 'income' ? "bg-white shadow-sm" : "opacity-50")}>Income</button>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold uppercase opacity-40 mb-1 block">Amount</label>
-                  <input type="number" value={newExpense.amount || ''} onChange={(e) => setNewExpense({ ...newExpense, amount: Number(e.target.value) })} className="w-full bg-app-green/5 border-none rounded-xl p-4 text-2xl font-bold focus:ring-1 focus:ring-app-green" placeholder="0.00" autoFocus />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-bold uppercase opacity-40 mb-1 block">Category</label>
-                    <select value={newExpense.category} onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })} className="w-full bg-app-green/5 border-none rounded-xl p-3 text-sm focus:ring-1 focus:ring-app-green">
-                      {(newExpense.type === 'income' ? incomeCategories : expenseCategories).map(c => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold uppercase opacity-40 mb-1 block">Account</label>
-                    <select value={newExpense.account} onChange={(e) => setNewExpense({ ...newExpense, account: e.target.value })} className="w-full bg-app-green/5 border-none rounded-xl p-3 text-sm focus:ring-1 focus:ring-app-green">
-                      {accounts.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-bold uppercase opacity-40 mb-1 block">Date</label>
-                    <input type="date" value={newExpense.date} onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })} className="w-full bg-app-green/5 border-none rounded-xl p-3 text-sm focus:ring-1 focus:ring-app-green" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold uppercase opacity-40 mb-1 block">Time</label>
-                    <input type="time" value={newExpense.time} onChange={(e) => setNewExpense({ ...newExpense, time: e.target.value })} className="w-full bg-app-green/5 border-none rounded-xl p-3 text-sm focus:ring-1 focus:ring-app-green" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold uppercase opacity-40 mb-1 block">Note</label>
-                  <textarea 
-                    value={newExpense.note} 
-                    onChange={(e) => setNewExpense({ ...newExpense, note: e.target.value })} 
-                    className="w-full bg-app-green/5 border-none rounded-xl p-3 text-sm focus:ring-1 focus:ring-app-green min-h-[80px] resize-none" 
-                    placeholder="Write a small note..."
-                  />
-                </div>
-
-                <button onClick={handleAddExpense} className="w-full bg-app-green text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform">Save Record</button>
+              <div className="overflow-y-auto space-y-2">
+                {accounts.map(a => (
+                  <button 
+                    key={a.id}
+                    onClick={() => {
+                      setNewExpense({...newExpense, account: a.name});
+                      setIsAccountSelectorOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-4 p-4 rounded-2xl transition-all",
+                      newExpense.account === a.name ? "bg-app-green text-white shadow-md" : "bg-app-green/5 hover:bg-app-green/10"
+                    )}
+                  >
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
+                      {a.icon}
+                    </div>
+                    <span className="font-bold">{a.name}</span>
+                  </button>
+                ))}
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* To Account Selector Modal */}
+      <AnimatePresence>
+        {isToAccountSelectorOpen && (
+          <div className="fixed inset-0 z-[80] flex items-end justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsToAccountSelectorOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="relative w-full max-w-md bg-[#FDFDF0] rounded-t-[32px] p-6 shadow-2xl flex flex-col max-h-[70vh]">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Transfer To</h2>
+                <button onClick={() => setIsToAccountSelectorOpen(false)} className="p-2 bg-app-green/5 rounded-full"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="overflow-y-auto space-y-2">
+                {accounts.map(a => (
+                  <button 
+                    key={a.id}
+                    onClick={() => {
+                      setNewExpense({...newExpense, toAccount: a.name});
+                      setIsToAccountSelectorOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-4 p-4 rounded-2xl transition-all",
+                      newExpense.toAccount === a.name ? "bg-app-green text-white shadow-md" : "bg-app-green/5 hover:bg-app-green/10"
+                    )}
+                  >
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
+                      {a.icon}
+                    </div>
+                    <span className="font-bold">{a.name}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Category Selector Modal */}
+      <AnimatePresence>
+        {isCategorySelectorOpen && (
+          <div className="fixed inset-0 z-[80] flex items-end justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCategorySelectorOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="relative w-full max-w-md bg-[#FDFDF0] rounded-t-[32px] p-6 shadow-2xl flex flex-col max-h-[70vh]">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Select Category</h2>
+                <button onClick={() => setIsCategorySelectorOpen(false)} className="p-2 bg-app-green/5 rounded-full"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="overflow-y-auto space-y-2">
+                {(newExpense.type === 'income' ? incomeCategories : expenseCategories).map(c => (
+                  <button 
+                    key={c.id}
+                    onClick={() => {
+                      setNewExpense({...newExpense, category: c.name});
+                      setIsCategorySelectorOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-4 p-4 rounded-2xl transition-all",
+                      newExpense.category === c.name ? "bg-app-green text-white shadow-md" : "bg-app-green/5 hover:bg-app-green/10"
+                    )}
+                  >
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
+                      {c.icon}
+                    </div>
+                    <span className="font-bold">{c.name}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Date Picker Modal */}
+      <AnimatePresence>
+        {isDatePickerOpen && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsDatePickerOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-xs bg-[#FDFDF0] rounded-3xl p-6 shadow-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-bold">Select Date</h2>
+                <button onClick={() => setIsDatePickerOpen(false)} className="p-2 bg-app-green/5 rounded-full"><X className="w-4 h-4" /></button>
+              </div>
+              <input 
+                type="date" 
+                value={newExpense.date} 
+                onChange={(e) => {
+                  setNewExpense({...newExpense, date: e.target.value});
+                  setIsDatePickerOpen(false);
+                }}
+                className="w-full bg-app-green/5 border-none rounded-xl p-4 text-sm font-bold focus:ring-1 focus:ring-app-green"
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Time Picker Modal */}
+      <AnimatePresence>
+        {isTimePickerOpen && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTimePickerOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-xs bg-[#FDFDF0] rounded-3xl p-6 shadow-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-bold">Select Time</h2>
+                <button onClick={() => setIsTimePickerOpen(false)} className="p-2 bg-app-green/5 rounded-full"><X className="w-4 h-4" /></button>
+              </div>
+              <input 
+                type="time" 
+                value={newExpense.time} 
+                onChange={(e) => {
+                  setNewExpense({...newExpense, time: e.target.value});
+                  setIsTimePickerOpen(false);
+                }}
+                className="w-full bg-app-green/5 border-none rounded-xl p-4 text-sm font-bold focus:ring-1 focus:ring-app-green"
+              />
             </motion.div>
           </div>
         )}
@@ -2299,7 +2934,183 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Passcode Modal */}
+      {/* Currency Selection Modal */}
+      <AnimatePresence>
+        {isCurrencyModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCurrencyModalOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="relative w-full max-w-md bg-[#FDFDF0] rounded-t-[32px] p-6 shadow-2xl flex flex-col max-h-[80vh]">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Select Currency</h2>
+                <button onClick={() => setIsCurrencyModalOpen(false)} className="p-2 bg-app-green/5 rounded-full"><X className="w-5 h-5" /></button>
+              </div>
+
+              <div className="relative mb-4">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 opacity-30" />
+                <input 
+                  type="text" 
+                  placeholder="Search currency or country..." 
+                  value={currencySearchQuery}
+                  onChange={(e) => setCurrencySearchQuery(e.target.value)}
+                  className="w-full bg-app-green/5 border-none rounded-xl py-3 pl-11 pr-4 text-sm focus:ring-1 focus:ring-app-green"
+                />
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-1 pr-2 custom-scrollbar">
+                {filteredCurrencies.map(c => (
+                  <button 
+                    key={c.code}
+                    onClick={() => {
+                      setCurrencySymbol(c.symbol);
+                      localStorage.setItem('mymoney_currency', c.symbol);
+                      setIsCurrencyModalOpen(false);
+                      setCurrencySearchQuery('');
+                      showNotification(`Currency set to ${c.name} (${c.symbol})`);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between p-3 rounded-xl transition-all",
+                      currencySymbol === c.symbol ? "bg-app-green text-white shadow-md" : "hover:bg-app-green/5"
+                    )}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold",
+                        currencySymbol === c.symbol ? "bg-white/20" : "bg-app-green/10 text-app-green"
+                      )}>
+                        {c.symbol}
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-bold">{c.name}</p>
+                        <p className="text-[10px] opacity-50 uppercase tracking-widest">{c.code}</p>
+                      </div>
+                    </div>
+                    {currencySymbol === c.symbol && <ShieldCheck className="w-5 h-5" />}
+                  </button>
+                ))}
+                {filteredCurrencies.length === 0 && (
+                  <div className="py-10 text-center opacity-40">
+                    <p>No currencies found matching "{currencySearchQuery}"</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Passcode Setup Modal */}
+      <AnimatePresence>
+        {isPasscodeSetupOpen && (
+          <div className="fixed inset-0 z-[210] flex items-center justify-center bg-app-bg">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              className="w-full max-w-xs flex flex-col items-center gap-8"
+            >
+              <div className="text-center">
+                <div className="w-20 h-20 bg-app-green/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ShieldCheck className="w-10 h-10 text-app-green" />
+                </div>
+                <h2 className="text-2xl font-bold">
+                  {passcodeSetupMode === 'disable' ? 'Disable Passcode' : 
+                   passcodeSetupStep === 1 ? 'Set Passcode' : 'Confirm Passcode'}
+                </h2>
+                <p className="text-sm opacity-50">
+                  {passcodeSetupMode === 'disable' ? 'Enter current PIN to disable' :
+                   passcodeSetupStep === 1 ? 'Enter 4-6 digit PIN' : 'Re-enter your PIN'}
+                </p>
+              </div>
+
+              <div className="flex gap-3 h-4 items-center">
+                {Array.from({ length: Math.max(passcodeAttempt.length, 4) }).map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={cn(
+                      "w-3 h-3 rounded-full border-2 border-app-green transition-all",
+                      passcodeAttempt.length > i ? "bg-app-green" : "bg-transparent"
+                    )} 
+                  />
+                ))}
+              </div>
+
+              <div className="grid grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'cancel', 0, 'del'].map((num, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      if (num === 'del') {
+                        setPasscodeAttempt(prev => prev.slice(0, -1));
+                      } else if (num === 'cancel') {
+                        setIsPasscodeSetupOpen(false);
+                        setPasscodeAttempt('');
+                      } else if (typeof num === 'number') {
+                        if (passcodeAttempt.length < 6) {
+                          const newAttempt = passcodeAttempt + num;
+                          setPasscodeAttempt(newAttempt);
+                        }
+                      }
+                    }}
+                    className={cn(
+                      "w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold transition-all active:bg-app-green/20",
+                      num === 'cancel' ? "text-red-500 text-xs uppercase" : "bg-app-green/5"
+                    )}
+                  >
+                    {num === 'del' ? <Delete className="w-6 h-6" /> : num}
+                  </button>
+                ))}
+              </div>
+
+              <button 
+                disabled={passcodeAttempt.length < 4}
+                onClick={() => {
+                  if (passcodeSetupMode === 'disable') {
+                    if (passcodeAttempt === passcode) {
+                      setPasscode(null);
+                      setSecurityEnabled(false);
+                      setIsLocked(false);
+                      localStorage.removeItem('mymoney_passcode');
+                      localStorage.setItem('mymoney_security_enabled', 'false');
+                      setIsPasscodeSetupOpen(false);
+                      showNotification('Passcode disabled');
+                    } else {
+                      showNotification('Incorrect passcode!', 'error');
+                      setPasscodeAttempt('');
+                    }
+                  } else {
+                    if (passcodeSetupStep === 1) {
+                      setTempPasscode(passcodeAttempt);
+                      setPasscodeAttempt('');
+                      setPasscodeSetupStep(2);
+                    } else {
+                      if (passcodeAttempt === tempPasscode) {
+                        setPasscode(passcodeAttempt);
+                        setSecurityEnabled(true);
+                        localStorage.setItem('mymoney_passcode', passcodeAttempt);
+                        localStorage.setItem('mymoney_security_enabled', 'true');
+                        setIsPasscodeSetupOpen(false);
+                        showNotification('Passcode set successfully!');
+                      } else {
+                        showNotification('Passcodes do not match!', 'error');
+                        setPasscodeAttempt('');
+                        setPasscodeSetupStep(1);
+                      }
+                    }
+                  }
+                }}
+                className={cn(
+                  "w-full py-4 rounded-2xl font-bold transition-all",
+                  passcodeAttempt.length >= 4 ? "bg-app-green text-white shadow-lg" : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                )}
+              >
+                {passcodeSetupMode === 'disable' ? 'Confirm Disable' : 
+                 passcodeSetupStep === 1 ? 'Next' : 'Set Passcode'}
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Passcode Modal (Lock Screen) */}
       <AnimatePresence>
         {isPasscodeModalOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center bg-app-bg">
@@ -2316,12 +3127,12 @@ export default function App() {
                 <p className="text-sm opacity-50">MyMoney is locked</p>
               </div>
 
-              <div className="flex gap-4">
-                {[0, 1, 2, 3].map(i => (
+              <div className="flex gap-3 h-4 items-center">
+                {Array.from({ length: Math.max(passcodeAttempt.length, passcode?.length || 4) }).map((_, i) => (
                   <div 
                     key={i} 
                     className={cn(
-                      "w-4 h-4 rounded-full border-2 border-app-green transition-all",
+                      "w-3 h-3 rounded-full border-2 border-app-green transition-all",
                       passcodeAttempt.length > i ? "bg-app-green" : "bg-transparent"
                     )} 
                   />
@@ -2335,18 +3146,19 @@ export default function App() {
                     onClick={() => {
                       if (num === 'del') {
                         setPasscodeAttempt(prev => prev.slice(0, -1));
-                      } else if (num !== '') {
-                        if (passcodeAttempt.length < 4) {
+                      } else if (typeof num === 'number') {
+                        if (passcodeAttempt.length < 6) {
                           const newAttempt = passcodeAttempt + num;
                           setPasscodeAttempt(newAttempt);
-                          if (newAttempt.length === 4) {
-                            if (newAttempt === passcode) {
-                              setIsLocked(false);
-                              setIsPasscodeModalOpen(false);
-                              setPasscodeAttempt('');
-                            } else {
-                              showNotification('Incorrect passcode!');
-                              setPasscodeAttempt('');
+                          if (newAttempt === passcode) {
+                            setIsLocked(false);
+                            setIsPasscodeModalOpen(false);
+                            setPasscodeAttempt('');
+                          } else if (newAttempt.length >= (passcode?.length || 4)) {
+                            // If it reaches the length of stored passcode and doesn't match
+                            if (newAttempt.length === (passcode?.length || 4)) {
+                               showNotification('Incorrect passcode!', 'error');
+                               setPasscodeAttempt('');
                             }
                           }
                         }
@@ -2357,9 +3169,57 @@ export default function App() {
                       num === '' ? "invisible" : "bg-app-green/5"
                     )}
                   >
-                    {num === 'del' ? <ChevronLeft className="w-6 h-6" /> : num}
+                    {num === 'del' ? <Delete className="w-6 h-6" /> : num}
                   </button>
                 ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Reset Confirmation Modal */}
+      <AnimatePresence>
+        {isResetModalOpen && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsResetModalOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-xs bg-white rounded-[32px] p-8 shadow-2xl text-center">
+              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Trash2 className="w-10 h-10 text-red-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Reset All Data?</h2>
+              <p className="text-sm text-gray-500 mb-8 leading-relaxed">This will permanently delete all your records, accounts, and categories. This action cannot be undone.</p>
+              
+              <div className="space-y-3">
+                <button 
+                  onClick={() => {
+                    setExpenses([]); 
+                    setAccounts([
+                      { id: 'a1', name: 'Cash', initial: 0, balance: 0, icon: '💵' },
+                      { id: 'a2', name: 'Card', initial: 0, balance: 0, icon: '💳' },
+                      { id: 'a3', name: 'Savings', initial: 0, balance: 0, icon: '🐷' },
+                    ]);
+                    setBudgets([]);
+                    setIncomeCategories(INCOME_CATEGORIES);
+                    setExpenseCategories(EXPENSE_CATEGORIES);
+                    setPasscode(null);
+                    setSecurityEnabled(false);
+                    localStorage.clear();
+                    setIsResetModalOpen(false);
+                    setIsPreferencesOpen(false);
+                    showNotification('All data has been reset.', 'success');
+                    window.location.reload(); // Reload to ensure clean state
+                  }}
+                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-200 active:scale-95 transition-all"
+                >
+                  Yes, Reset Everything
+                </button>
+                <button 
+                  onClick={() => setIsResetModalOpen(false)}
+                  className="w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold active:scale-95 transition-all"
+                >
+                  Cancel
+                </button>
               </div>
             </motion.div>
           </div>
@@ -2408,7 +3268,14 @@ export default function App() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <DetailItem label="Account" value={selectedExpense.account} />
+                  {selectedExpense.type === 'transfer' ? (
+                    <>
+                      <DetailItem label="From Account" value={selectedExpense.account} />
+                      <DetailItem label="To Account" value={selectedExpense.toAccount || ''} />
+                    </>
+                  ) : (
+                    <DetailItem label="Account" value={selectedExpense.account} />
+                  )}
                   <DetailItem label="Date" value={selectedExpense.date} />
                   <DetailItem label="Time" value={selectedExpense.time} />
                 </div>
