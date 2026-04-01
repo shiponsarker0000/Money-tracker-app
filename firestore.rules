@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: /users/{userId}/expenses/{expenseId}
+    // Fields: id, amount, category, accountId, date, note, type, toAccountId, attachments
+    //
+    // Collection: /users/{userId}/accounts/{accountId}
+    // Fields: id, name, type, balance, icon, color
+    //
+    // Collection: /users/{userId}/categories/{categoryId}
+    // Fields: id, name, icon, color, type
+    //
+    // Collection: /users/{userId}/budgets/{budgetId}
+    // Fields: id, categoryId, amount, period
+    //
+    // Collection: /users/{userId}/settings/main
+    // Fields: currencySymbol, currencyPosition, decimalPlaces, uiMode, passcode, reminderEnabled, currentThemeId
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "shiponsarker2023@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidString(val, min, max) {
+      return val is string && val.size() >= min && val.size() <= max;
+    }
+
+    function isValidNumber(val, min) {
+      return val is number && val >= min;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+
+      match /expenses/{expenseId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+
+      match /accounts/{accountId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+
+      match /categories/{categoryId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+
+      match /budgets/{budgetId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+
+      match /settings/{settingId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+  }
+}

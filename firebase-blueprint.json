@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "Expense": {
+      "title": "Expense",
+      "description": "A financial transaction record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "account": { "type": "string" },
+        "toAccount": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "note": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["income", "expense", "transfer"] }
+      },
+      "required": ["id", "amount", "category", "account", "date", "type"]
+    },
+    "Account": {
+      "title": "Account",
+      "description": "A financial account or wallet",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "initial": { "type": "number" },
+        "balance": { "type": "number" },
+        "icon": { "type": "string" }
+      },
+      "required": ["id", "name", "initial", "balance"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "A category for income or expense",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "type": { "type": "string", "enum": ["income", "expense"] }
+      },
+      "required": ["id", "name", "icon", "color", "type"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "A budget for a category",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "amount": { "type": "number" },
+        "period": { "type": "string", "enum": ["monthly", "weekly", "yearly"] }
+      },
+      "required": ["id", "categoryId", "amount", "period"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "User preferences and settings",
+      "type": "object",
+      "properties": {
+        "currencySymbol": { "type": "string" },
+        "currencyPosition": { "type": "string" },
+        "decimalPlaces": { "type": "number" },
+        "uiMode": { "type": "string" },
+        "passcode": { "type": "string" },
+        "reminderEnabled": { "type": "boolean" },
+        "currentThemeId": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}/expenses/{expenseId}": {
+      "schema": { "$ref": "Expense" },
+      "description": "User's financial transactions"
+    },
+    "/users/{userId}/accounts/{accountId}": {
+      "schema": { "$ref": "Account" },
+      "description": "User's financial accounts"
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": { "$ref": "Category" },
+      "description": "User's custom categories"
+    },
+    "/users/{userId}/budgets/{budgetId}": {
+      "schema": { "$ref": "Budget" },
+      "description": "User's budget settings"
+    },
+    "/users/{userId}/settings/main": {
+      "schema": { "$ref": "Settings" },
+      "description": "User's global settings"
+    }
+  }
+}

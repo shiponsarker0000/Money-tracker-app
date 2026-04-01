@@ -21,6 +21,7 @@ import {
   Star,
   ThumbsUp,
   Mail,
+  ImagePlus,
   X,
   ShieldCheck,
   Check,
@@ -29,13 +30,105 @@ import {
   ArrowRight,
   Calendar,
   Clock,
-  Save
+  Save,
+  Cloud,
+  CloudUpload,
+  CloudDownload,
+  FolderOpen,
+  RefreshCw,
+  Database,
+  Car,
+  Shirt,
+  Utensils,
+  GraduationCap,
+  Users,
+  Gift,
+  Stethoscope,
+  ShoppingBag,
+  Phone,
+  Bus,
+  Sparkles,
+  Cpu,
+  Tv,
+  Share2,
+  Trophy,
+  Receipt,
+  Home,
+  Zap,
+  Wifi,
+  PiggyBank,
+  Banknote,
+  Laptop,
+  Store,
+  TrendingUp,
+  Medal,
+  Ticket,
+  Heart,
+  RotateCcw,
+  PlusCircle,
+  Briefcase,
+  Terminal,
+  Key,
+  LineChart as LucideLineChart,
+  Award,
+  Package,
+  Undo,
+  HandCoins,
+  Building2,
+  Smartphone,
+  CreditCard,
+  Globe,
+  Coins
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LineChart, Line, AreaChart, Area } from 'recharts';
 import CryptoJS from 'crypto-js';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { 
+  auth, 
+  db, 
+  loginWithGoogle, 
+  logout, 
+  saveToFirestore, 
+  deleteFromFirestore,
+  cleanData,
+  OperationType,
+  handleFirestoreError
+} from './firebase';
+import { 
+  onAuthStateChanged, 
+  User 
+} from 'firebase/auth';
+import { 
+  collection, 
+  onSnapshot, 
+  query, 
+  orderBy,
+  where,
+  writeBatch,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp
+} from 'firebase/firestore';
+
+const ICON_MAP: Record<string, React.ElementType> = {
+  Car, Shirt, Utensils, GraduationCap, Users, Gift, Stethoscope, ShoppingBag, Phone, Bus, Sparkles, Cpu, Tv, Share2, Trophy, Receipt, Home, Zap, Wifi, PiggyBank, MoreHorizontal, Banknote, Laptop, Store, TrendingUp, Medal, Ticket, Heart, RotateCcw, PlusCircle, Briefcase, Terminal, Key, LucideLineChart, Award, Package, Undo, HandCoins, Wallet, Tag, ShieldCheck, Calendar, Clock, Database, RefreshCw, FolderOpen, Cloud, Save, Delete, Check, X, ImagePlus, Mail, ThumbsUp, Star, SettingsIcon, Upload, Download, Filter, Plus, FileText, PieChart, Calculator, Menu, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Building2, Smartphone, CreditCard, Globe, Coins
+};
+
+const IconDisplay = ({ icon, customIcon, className, color }: { icon: string, customIcon?: string, className?: string, color?: string }) => {
+  if (customIcon) {
+    return <img src={customIcon} className={cn("object-cover", className)} alt="Icon" referrerPolicy="no-referrer" />;
+  }
+  
+  const LucideIcon = ICON_MAP[icon];
+  if (LucideIcon) {
+    return <LucideIcon className={cn(className, color)} />;
+  }
+  
+  return <div className={cn(className, color)}>{icon}</div>;
+};
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -61,6 +154,7 @@ interface Category {
   icon: string;
   color: string;
   type: 'income' | 'expense';
+  customIcon?: string;
 }
 
 interface Account {
@@ -69,6 +163,7 @@ interface Account {
   initial: number;
   balance: number;
   icon: string;
+  customIcon?: string;
 }
 
 interface Budget {
@@ -97,8 +192,13 @@ const EXPENSE_CATEGORIES: Category[] = [
   { id: 'e5', name: 'Clothing', icon: '👕', color: 'bg-orange-600', type: 'expense' },
 ];
 
-const ACCOUNT_ICONS = ['💵', '💳', '🐷', '🏦', '💰', '📱', '💼', '💎'];
-const CATEGORY_ICONS = ['🏆', '🎟️', '🤝', '🎫', '💰', '🏠', '💼', '🏷️', '🍼', '💄', '📄', '🚗', '👕', '🍔', '🎬', '🏥', '🎓', '🎁', '💡', '🛠️'];
+const ACCOUNT_ICONS = ['Wallet', 'Building2', 'Smartphone', 'PiggyBank', 'CreditCard', 'TrendingUp', 'ShieldCheck', 'Globe', 'Coins', '💵', '💳', '🏦', '💰', '📱', '💼', '💎'];
+
+const CATEGORY_ICONS = [
+  'Car', 'Shirt', 'Utensils', 'GraduationCap', 'Users', 'Gift', 'Stethoscope', 'ShoppingBag', 'Phone', 'Bus', 'Sparkles', 'Cpu', 'Tv', 'ShieldCheck', 'Share2', 'Trophy', 'Receipt', 'Home', 'Zap', 'Wifi', 'PiggyBank', 'MoreHorizontal',
+  'Banknote', 'Laptop', 'Store', 'TrendingUp', 'Medal', 'Ticket', 'Heart', 'RotateCcw', 'PlusCircle', 'Briefcase', 'Terminal', 'Key', 'LucideLineChart', 'Award', 'Package', 'Undo', 'HandCoins',
+  '🏆', '🎟️', '🤝', '🎫', '💰', '🏠', '💼', '🏷️', '🍼', '💄', '📄', '🚗', '👕', '🍔', '🎬', '🏥', '🎓', '🎁', '💡', '🛠️'
+];
 const CATEGORY_COLORS = ['bg-blue-600', 'bg-red-500', 'bg-teal-600', 'bg-red-600', 'bg-purple-600', 'bg-indigo-600', 'bg-pink-600', 'bg-green-600', 'bg-orange-800', 'bg-pink-500', 'bg-gray-700', 'bg-blue-800', 'bg-orange-600', 'bg-yellow-600', 'bg-cyan-600'];
 const ENCRYPTION_KEY = 'mymoney-secret-key';
 
@@ -129,30 +229,54 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'records' | 'analysis' | 'budgets' | 'accounts' | 'categories'>('records');
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([
-    { id: 'a1', name: 'Cash', initial: 0, balance: 0, icon: '💵' },
-    { id: 'a2', name: 'Card', initial: 0, balance: 0, icon: '💳' },
-    { id: 'a3', name: 'Savings', initial: 0, balance: 0, icon: '🐷' },
+    { id: 'a1', name: 'Cash', initial: 0, balance: 0, icon: 'Wallet' },
+    { id: 'a2', name: 'Bank', initial: 0, balance: 0, icon: 'Building2' },
+    { id: 'a3', name: 'Mobile Banking', initial: 0, balance: 0, icon: 'Smartphone' },
+    { id: 'a4', name: 'Savings/FDR', initial: 0, balance: 0, icon: 'PiggyBank' },
+    { id: 'a5', name: 'Credit Card', initial: 0, balance: 0, icon: 'CreditCard' },
   ]);
 
   const [incomeCategories, setIncomeCategories] = useState<Category[]>([
-    { id: 'i1', name: 'Awards', icon: '🏆', color: 'bg-blue-600', type: 'income' },
-    { id: 'i2', name: 'Coupons', icon: '🎟️', color: 'bg-red-500', type: 'income' },
-    { id: 'i3', name: 'Grants', icon: '🤝', color: 'bg-teal-600', type: 'income' },
-    { id: 'i4', name: 'Lottery', icon: '🎫', color: 'bg-red-600', type: 'income' },
-    { id: 'i5', name: 'Refunds', icon: '💰', color: 'bg-purple-600', type: 'income' },
-    { id: 'i6', name: 'Rental', icon: '🏠', color: 'bg-indigo-600', type: 'income' },
-    { id: 'i7', name: 'Salary', icon: '💼', color: 'bg-pink-600', type: 'income' },
-    { id: 'i8', name: 'Sale', icon: '🏷️', color: 'bg-green-600', type: 'income' },
+    { id: 'i1', name: 'Salary (বেতন)', icon: 'Banknote', color: 'bg-green-600', type: 'income' },
+    { id: 'i2', name: 'Freelancing (ফ্রিল্যান্সিং)', icon: 'Laptop', color: 'bg-blue-600', type: 'income' },
+    { id: 'i3', name: 'Business (ব্যবসা)', icon: 'Store', color: 'bg-orange-600', type: 'income' },
+    { id: 'i4', name: 'Rental Income (ভাড়া)', icon: 'Home', color: 'bg-indigo-600', type: 'income' },
+    { id: 'i5', name: 'Investments/Stocks (বিনিয়োগ)', icon: 'TrendingUp', color: 'bg-teal-600', type: 'income' },
+    { id: 'i6', name: 'Bonus (বোনাস)', icon: 'Gift', color: 'bg-pink-600', type: 'income' },
+    { id: 'i7', name: 'Scholarship/Awards (পুরস্কার)', icon: 'Medal', color: 'bg-yellow-600', type: 'income' },
+    { id: 'i8', name: 'Lottery (লটারি)', icon: 'Ticket', color: 'bg-red-600', type: 'income' },
+    { id: 'i9', name: 'Gifts (উপহার)', icon: 'Heart', color: 'bg-rose-600', type: 'income' },
+    { id: 'i10', name: 'Refunds (ফেরত পাওয়া অর্থ)', icon: 'RotateCcw', color: 'bg-purple-600', type: 'income' },
+    { id: 'i11', name: 'Sale of Assets (সম্পদ বিক্রি)', icon: 'Tag', color: 'bg-emerald-600', type: 'income' },
+    { id: 'i12', name: 'Other Income (অন্যান্য)', icon: 'PlusCircle', color: 'bg-gray-600', type: 'income' },
   ]);
 
   const [expenseCategories, setExpenseCategories] = useState<Category[]>([
-    { id: 'e1', name: 'Baby', icon: '🍼', color: 'bg-orange-800', type: 'expense' },
-    { id: 'e2', name: 'Beauty', icon: '💄', color: 'bg-pink-500', type: 'expense' },
-    { id: 'e3', name: 'Bills', icon: '📄', color: 'bg-gray-700', type: 'expense' },
-    { id: 'e4', name: 'Car', icon: '🚗', color: 'bg-blue-800', type: 'expense' },
-    { id: 'e5', name: 'Clothing', icon: '👕', color: 'bg-orange-600', type: 'expense' },
+    { id: 'e1', name: 'Car', icon: 'Car', color: 'bg-blue-800', type: 'expense' },
+    { id: 'e2', name: 'Cloth', icon: 'Shirt', color: 'bg-orange-600', type: 'expense' },
+    { id: 'e3', name: 'Food', icon: 'Utensils', color: 'bg-red-500', type: 'expense' },
+    { id: 'e4', name: 'Education', icon: 'GraduationCap', color: 'bg-indigo-700', type: 'expense' },
+    { id: 'e5', name: 'Family', icon: 'Users', color: 'bg-teal-600', type: 'expense' },
+    { id: 'e6', name: 'Gift', icon: 'Gift', color: 'bg-pink-500', type: 'expense' },
+    { id: 'e7', name: 'Health', icon: 'Stethoscope', color: 'bg-red-600', type: 'expense' },
+    { id: 'e8', name: 'Shopping', icon: 'ShoppingBag', color: 'bg-purple-600', type: 'expense' },
+    { id: 'e9', name: 'Telephone', icon: 'Phone', color: 'bg-blue-600', type: 'expense' },
+    { id: 'e10', name: 'Transportation', icon: 'Bus', color: 'bg-yellow-600', type: 'expense' },
+    { id: 'e11', name: 'Beauty', icon: 'Sparkles', color: 'bg-pink-400', type: 'expense' },
+    { id: 'e12', name: 'Electronics', icon: 'Cpu', color: 'bg-gray-700', type: 'expense' },
+    { id: 'e13', name: 'Entertainment', icon: 'Tv', color: 'bg-indigo-500', type: 'expense' },
+    { id: 'e14', name: 'Insurance', icon: 'ShieldCheck', color: 'bg-blue-700', type: 'expense' },
+    { id: 'e15', name: 'Social', icon: 'Share2', color: 'bg-sky-500', type: 'expense' },
+    { id: 'e16', name: 'Sport', icon: 'Trophy', color: 'bg-yellow-700', type: 'expense' },
+    { id: 'e17', name: 'Tax', icon: 'Receipt', color: 'bg-red-800', type: 'expense' },
+    { id: 'e18', name: 'Housing/Rent', icon: 'Home', color: 'bg-amber-800', type: 'expense' },
+    { id: 'e19', name: 'Utilities/Bills', icon: 'Zap', color: 'bg-yellow-500', type: 'expense' },
+    { id: 'e20', name: 'Internet', icon: 'Wifi', color: 'bg-blue-500', type: 'expense' },
+    { id: 'e21', name: 'Savings', icon: 'PiggyBank', color: 'bg-green-700', type: 'expense' },
+    { id: 'e22', name: 'Other', icon: 'MoreHorizontal', color: 'bg-gray-500', type: 'expense' },
   ]);
   
+  const [isNoteFocused, setIsNoteFocused] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -190,7 +314,195 @@ export default function App() {
   const [tempPasscode, setTempPasscode] = useState('');
   const [passcodeAttempt, setPasscodeAttempt] = useState('');
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
+  const [isManagementModalOpen, setIsManagementModalOpen] = useState(false);
   const [currencySearchQuery, setCurrencySearchQuery] = useState('');
+
+  // Firebase Auth & Sync States
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
+
+  // Firebase Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsAuthReady(true);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Sync Data from Firestore
+  useEffect(() => {
+    if (!user || !isAuthReady) return;
+
+    setIsSyncing(true);
+
+    // Sync Expenses
+    const unsubExpenses = onSnapshot(
+      query(collection(db, `users/${user.uid}/expenses`), orderBy('date', 'desc')),
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => doc.data() as Expense);
+        if (data.length > 0) setExpenses(data);
+        setIsSyncing(false);
+        setLastSynced(new Date());
+      },
+      (error) => handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/expenses`)
+    );
+
+    // Sync Accounts
+    const unsubAccounts = onSnapshot(
+      collection(db, `users/${user.uid}/accounts`),
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => doc.data() as Account);
+        if (data.length > 0) setAccounts(data);
+      },
+      (error) => handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/accounts`)
+    );
+
+    // Sync Categories
+    const unsubIncomeCats = onSnapshot(
+      query(collection(db, `users/${user.uid}/categories`), where('type', '==', 'income')),
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => doc.data() as Category);
+        if (data.length > 0) setIncomeCategories(data);
+      }
+    );
+
+    const unsubExpenseCats = onSnapshot(
+      query(collection(db, `users/${user.uid}/categories`), where('type', '==', 'expense')),
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => doc.data() as Category);
+        if (data.length > 0) setExpenseCategories(data);
+      }
+    );
+
+    // Sync Settings
+    const unsubSettings = onSnapshot(
+      doc(db, `users/${user.uid}/settings/main`),
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const s = snapshot.data();
+          if (s.currencySymbol) setCurrencySymbol(s.currencySymbol);
+          if (s.currencyPosition) setCurrencyPosition(s.currencyPosition);
+          if (s.decimalPlaces !== undefined) setDecimalPlaces(s.decimalPlaces);
+          if (s.uiMode) setUiMode(s.uiMode);
+          if (s.passcode) setPasscode(s.passcode);
+          if (s.reminderEnabled !== undefined) setReminderEnabled(s.reminderEnabled);
+          if (s.currentThemeId) {
+            const theme = THEMES.find(t => t.id === s.currentThemeId);
+            if (theme) setCurrentTheme(theme);
+          }
+        }
+      }
+    );
+
+    // Sync Budgets
+    const unsubBudgets = onSnapshot(
+      collection(db, `users/${user.uid}/budgets`),
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => doc.data() as Budget);
+        if (data.length > 0) setBudgets(data);
+      },
+      (error) => handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/budgets`)
+    );
+
+    return () => {
+      unsubExpenses();
+      unsubAccounts();
+      unsubIncomeCats();
+      unsubExpenseCats();
+      unsubSettings();
+      unsubBudgets();
+    };
+  }, [user, isAuthReady]);
+
+  // Save Settings to Firestore (Debounced)
+  useEffect(() => {
+    if (!user || !isAuthReady) return;
+
+    const saveSettings = async () => {
+      setIsSyncing(true);
+      try {
+        await saveToFirestore(`users/${user.uid}/settings/main`, {
+          currencySymbol,
+          currencyPosition,
+          decimalPlaces,
+          uiMode,
+          passcode,
+          reminderEnabled,
+          currentThemeId: currentTheme.id
+        });
+        setIsSyncing(false);
+        setLastSynced(new Date());
+      } catch (err) {
+        console.error("Error saving settings to Firestore", err);
+      }
+    };
+
+    const timer = setTimeout(saveSettings, 2000);
+    return () => clearTimeout(timer);
+  }, [user, isAuthReady, currencySymbol, currencyPosition, decimalPlaces, uiMode, passcode, reminderEnabled, currentTheme]);
+
+  // Firebase Sync Logic
+  const handleSyncLocalToCloud = async () => {
+    if (!user) {
+      showNotification('Please login first', 'error');
+      return;
+    }
+    setIsSyncing(true);
+    try {
+      const batch = writeBatch(db);
+      
+      // Sync Expenses
+      expenses.forEach(expense => {
+        const ref = doc(db, `users/${user.uid}/expenses`, expense.id);
+        batch.set(ref, { ...cleanData(expense), updatedAt: serverTimestamp() }, { merge: true });
+      });
+
+      // Sync Accounts
+      accounts.forEach(account => {
+        const ref = doc(db, `users/${user.uid}/accounts`, account.id);
+        batch.set(ref, { ...cleanData(account), updatedAt: serverTimestamp() }, { merge: true });
+      });
+
+      // Sync Categories
+      [...incomeCategories, ...expenseCategories].forEach(category => {
+        const ref = doc(db, `users/${user.uid}/categories`, category.id);
+        batch.set(ref, { ...cleanData(category), updatedAt: serverTimestamp() }, { merge: true });
+      });
+
+      // Sync Budgets
+      budgets.forEach(budget => {
+        const ref = doc(db, `users/${user.uid}/budgets`, budget.id);
+        batch.set(ref, { ...cleanData(budget), updatedAt: serverTimestamp() }, { merge: true });
+      });
+
+      // Sync Settings
+      const settingsRef = doc(db, `users/${user.uid}/settings/main`);
+      batch.set(settingsRef, {
+        ...cleanData({
+          currencySymbol,
+          currencyPosition,
+          decimalPlaces,
+          uiMode,
+          passcode,
+          reminderEnabled,
+          currentThemeId: currentTheme.id,
+        }),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      await batch.commit();
+      setLastSynced(new Date());
+      showNotification('Local data synced to cloud successfully!');
+    } catch (error) {
+      console.error('Sync error:', error);
+      showNotification('Failed to sync local data to cloud.', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Currency List (Common Currencies)
   const CURRENCIES = [
@@ -354,7 +666,7 @@ export default function App() {
     c.symbol.includes(currencySearchQuery)
   );
   const [viewMode, setViewMode] = useState<'Daily' | 'Weekly' | 'Monthly' | '3month' | '6month' | 'Year'>('Monthly');
-  const [analysisMode, setAnalysisMode] = useState<'Expense overview' | 'Income overview' | 'Expense flow' | 'Income flow' | 'Account analysis'>('Expense overview');
+  const [analysisMode, setAnalysisMode] = useState<'Expense overview' | 'Income overview' | 'Expense flow' | 'Income flow' | 'Account analysis' | 'Budget analysis'>('Expense overview');
   const [showTotal, setShowTotal] = useState(true);
   const [carryOver, setCarryOver] = useState(false);
   
@@ -690,9 +1002,11 @@ export default function App() {
 
     if (newExpense.id) {
       setExpenses(expenses.map(e => e.id === newExpense.id ? expense : e));
+      if (user) saveToFirestore(`users/${user.uid}/expenses/${expense.id}`, expense);
       showNotification('Record updated successfully!');
     } else {
       setExpenses([expense, ...expenses]);
+      if (user) saveToFirestore(`users/${user.uid}/expenses/${expense.id}`, expense);
       showNotification('Record saved successfully!');
     }
 
@@ -718,7 +1032,8 @@ export default function App() {
       name: newCategory.name,
       icon: newCategory.icon || '',
       color: newCategory.color || '',
-      type: newCategory.type as 'income' | 'expense'
+      type: newCategory.type as 'income' | 'expense',
+      customIcon: newCategory.customIcon
     };
 
     if (category.type === 'income') {
@@ -734,6 +1049,7 @@ export default function App() {
         setExpenseCategories([...expenseCategories, category]);
       }
     }
+    if (user) saveToFirestore(`users/${user.uid}/categories/${category.id}`, category);
 
     showNotification(`Category ${editingCategory ? 'updated' : 'added'} successfully!`);
     setIsCategoryModalOpen(false);
@@ -754,6 +1070,7 @@ export default function App() {
     } else {
       setExpenseCategories(expenseCategories.filter(c => c.id !== id));
     }
+    if (user) deleteFromFirestore(`users/${user.uid}/categories/${id}`);
     showNotification('Category deleted successfully!');
   };
 
@@ -771,14 +1088,17 @@ export default function App() {
       name: newAccount.name,
       initial: Number(newAccount.initial) || 0,
       balance: 0, // Balance is calculated dynamically
-      icon: newAccount.icon || ACCOUNT_ICONS[0]
+      icon: newAccount.icon || ACCOUNT_ICONS[0],
+      customIcon: newAccount.customIcon
     };
 
     if (editingAccount) {
       setAccounts(accounts.map(a => a.id === editingAccount.id ? account : a));
+      if (user) saveToFirestore(`users/${user.uid}/accounts/${account.id}`, account);
       showNotification('Account updated successfully!');
     } else {
       setAccounts([...accounts, account]);
+      if (user) saveToFirestore(`users/${user.uid}/accounts/${account.id}`, account);
       showNotification('Account added successfully!');
     }
 
@@ -801,6 +1121,7 @@ export default function App() {
 
     if (editingBudget) {
       setBudgets(budgets.map(b => b.id === editingBudget.id ? budget : b));
+      if (user) saveToFirestore(`users/${user.uid}/budgets/${budget.id}`, budget);
       showNotification('Budget updated successfully!');
     } else {
       // Check if budget already exists for this category and period
@@ -809,6 +1130,7 @@ export default function App() {
         return;
       }
       setBudgets([...budgets, budget]);
+      if (user) saveToFirestore(`users/${user.uid}/budgets/${budget.id}`, budget);
       showNotification('Budget set successfully!');
     }
 
@@ -819,6 +1141,7 @@ export default function App() {
 
   const handleDeleteBudget = (id: string) => {
     setBudgets(budgets.filter(b => b.id !== id));
+    if (user) deleteFromFirestore(`users/${user.uid}/budgets/${id}`);
     showNotification('Budget deleted successfully!');
     setIsBudgetModalOpen(false);
     setEditingBudget(null);
@@ -831,6 +1154,7 @@ export default function App() {
       return;
     }
     setAccounts(accounts.filter(a => a.id !== id));
+    if (user) deleteFromFirestore(`users/${user.uid}/accounts/${id}`);
     showNotification('Account deleted successfully!');
   };
 
@@ -842,6 +1166,7 @@ export default function App() {
 
   const handleDeleteExpense = (id: string) => {
     setExpenses(expenses.filter(e => e.id !== id));
+    if (user) deleteFromFirestore(`users/${user.uid}/expenses/${id}`);
     setIsDetailsModalOpen(false);
     showNotification('Record deleted successfully!');
   };
@@ -889,6 +1214,7 @@ export default function App() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     setIsSidebarOpen(false);
+    setIsManagementModalOpen(false);
     showNotification('Full backup downloaded successfully!');
   };
 
@@ -959,10 +1285,14 @@ export default function App() {
             }
           }
           
+          setIsSidebarOpen(false);
+          setIsManagementModalOpen(false);
           showNotification('All data restored successfully!');
         } else if (Array.isArray(parsed)) {
           // Fallback for old backup format which was just an array of expenses
           setExpenses(parsed);
+          setIsSidebarOpen(false);
+          setIsManagementModalOpen(false);
           showNotification('Records restored successfully!');
         } else {
           throw new Error('Invalid data format');
@@ -1092,16 +1422,28 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-app-bg text-app-green font-sans pb-20 overflow-x-hidden">
-      {/* Header */}
-      {!isLocked && (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center">
+      <div className="w-full max-w-2xl min-h-screen bg-app-bg text-app-green font-sans pb-20 overflow-x-hidden shadow-2xl relative">
+        {/* Header */}
+        {!isLocked && (
         <header className="px-4 py-3 flex justify-between items-center bg-[#FDFDF0] sticky top-0 z-30">
           {!isSearchOpen ? (
             <>
               <button onClick={() => setIsSidebarOpen(true)} className="p-1">
                 <Menu className="w-6 h-6" />
               </button>
-              <h1 className="text-2xl font-script font-bold text-center flex-1">MyMoney</h1>
+              <div className="flex-1 flex flex-col items-center">
+                <h1 className="text-2xl font-script font-bold">MyMoney</h1>
+                {isSyncing && (
+                  <div className="flex items-center gap-1 text-[10px] opacity-50">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>Syncing...</span>
+                  </div>
+                )}
+                {!isSyncing && lastSynced && (
+                  <span className="text-[10px] opacity-40">Synced at {lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                )}
+              </div>
               <button onClick={() => setIsSearchOpen(true)} className="p-1">
                 <Search className="w-6 h-6" />
               </button>
@@ -1155,22 +1497,43 @@ export default function App() {
                 className="fixed inset-y-0 left-0 w-72 bg-app-bg z-50 shadow-2xl flex flex-col"
               >
                 <div className="p-6 border-b border-[#1B4332]/10">
-                  <h2 className="text-xl font-script font-bold">MyMoney</h2>
-                  <p className="text-[10px] opacity-50">4.4-free</p>
+                  <div className="flex items-center gap-3 mb-2">
+                    {user ? (
+                      <img src={user.photoURL || ''} alt="Avatar" className="w-10 h-10 rounded-full border border-app-green/20" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-app-green/10 flex items-center justify-center">
+                        <Wallet className="w-6 h-6 opacity-40" />
+                      </div>
+                    )}
+                    <div className="flex-1 overflow-hidden">
+                      <h2 className="text-xl font-script font-bold truncate">{user ? user.displayName : 'MyMoney'}</h2>
+                      <p className="text-[10px] opacity-50 truncate">{user ? user.email : '4.4-free'}</p>
+                    </div>
+                  </div>
+                  {user ? (
+                    <button 
+                      onClick={() => { logout(); setIsSidebarOpen(false); }}
+                      className="w-full py-2 bg-red-500/10 text-red-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-red-500/20 transition-all"
+                    >
+                      Logout
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => { loginWithGoogle(); setIsSidebarOpen(false); }}
+                      className="w-full py-2 bg-app-green text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-app-green/90 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Login with Google
+                    </button>
+                  )}
                 </div>
                 
                 <div className="flex-1 overflow-y-auto py-4">
                   <SidebarItem icon={<SettingsIcon className="w-5 h-5" />} label="Preferences" onClick={() => { setIsPreferencesOpen(true); setIsSidebarOpen(false); }} />
                   
                   <div className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider opacity-40 mt-2">Management</div>
+                  <SidebarItem icon={<Database className="w-5 h-5" />} label="Data Management" onClick={() => { setIsManagementModalOpen(true); setIsSidebarOpen(false); }} />
                   <SidebarItem icon={<Download className="w-5 h-5" />} label="Export records (CSV)" onClick={handleExportCSV} />
-                  <SidebarItem icon={<Save className="w-5 h-5" />} label="Backup Data" onClick={handleBackup} />
-                  <div className="relative">
-                    <SidebarItem icon={<Upload className="w-5 h-5" />} label="Restore Data" />
-                    <label className="absolute inset-0 cursor-pointer opacity-0">
-                      <input type="file" accept=".enc" onChange={handleRestore} className="hidden" />
-                    </label>
-                  </div>
                   <SidebarItem icon={<Trash2 className="w-5 h-5" />} label="Delete & Reset" onClick={() => { 
                     setIsResetModalOpen(true);
                     setIsSidebarOpen(false);
@@ -1190,12 +1553,13 @@ export default function App() {
       {/* Preferences Page */}
       <AnimatePresence>
         {isPreferencesOpen && (
-          <motion.div 
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            className="fixed inset-0 bg-app-bg z-[60] flex flex-col"
-          >
+          <div className="fixed inset-0 bg-black/40 z-[60] flex justify-center items-center">
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              className="w-full max-w-2xl h-full bg-app-bg flex flex-col shadow-2xl"
+            >
             <header className="px-4 py-3 flex items-center gap-4 border-b border-[#1B4332]/10">
               <button onClick={() => setIsPreferencesOpen(false)}>
                 <ArrowLeft className="w-6 h-6" />
@@ -1361,6 +1725,7 @@ export default function App() {
               </SettingsSection>
             </div>
           </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
@@ -1499,12 +1864,14 @@ export default function App() {
                                     ? incomeCategories.find(c => c.name === e.category) 
                                     : expenseCategories.find(c => c.name === e.category);
                                   return (
-                                    <div className={cn(
-                                      "w-11 h-11 rounded-full flex items-center justify-center text-xl shadow-sm",
-                                      cat?.color || "bg-gray-200 text-white"
-                                    )}>
-                                      {cat?.icon || (!cat ? (e.type === 'income' ? '💰' : '💸') : '')}
-                                    </div>
+                                    <IconDisplay 
+                                      icon={cat?.icon || (e.type === 'income' ? '💰' : '💸')} 
+                                      customIcon={cat?.customIcon}
+                                      className={cn(
+                                        "w-11 h-11 rounded-full flex items-center justify-center text-xl shadow-sm",
+                                        cat?.color || "bg-gray-200 text-white"
+                                      )}
+                                    />
                                   );
                                 })()}
                                 <div>
@@ -1517,12 +1884,12 @@ export default function App() {
                                         return (
                                           <div className="flex items-center gap-1">
                                             <div className="flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
-                                              <span className="text-[10px]">{acc?.icon}</span>
+                                              <IconDisplay icon={acc?.icon || '💰'} customIcon={acc?.customIcon} className="w-4 h-4 rounded-full text-[10px] flex items-center justify-center" />
                                               <span className="text-[10px]">{e.account}</span>
                                             </div>
                                             <ArrowRight className="w-3 h-3 mx-0.5" />
                                             <div className="flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
-                                              <span className="text-[10px]">{toAcc?.icon}</span>
+                                              <IconDisplay icon={toAcc?.icon || '💰'} customIcon={toAcc?.customIcon} className="w-4 h-4 rounded-full text-[10px] flex items-center justify-center" />
                                               <span className="text-[10px]">{e.toAccount}</span>
                                             </div>
                                           </div>
@@ -1530,7 +1897,7 @@ export default function App() {
                                       }
                                       return (
                                         <div className="flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
-                                          <span className="text-[10px]">{acc?.icon}</span>
+                                          <IconDisplay icon={acc?.icon || '💰'} customIcon={acc?.customIcon} className="w-4 h-4 rounded-full text-[10px] flex items-center justify-center" />
                                           <span className="text-[10px]">{e.account}</span>
                                         </div>
                                       );
@@ -1646,6 +2013,7 @@ export default function App() {
                     <option value="Expense flow">Expense flow</option>
                     <option value="Income flow">Income flow</option>
                     <option value="Account analysis">Account analysis</option>
+                    <option value="Budget analysis">Budget analysis</option>
                   </select>
                   <div className="absolute left-6 top-1/2 -translate-y-1/2 pointer-events-none">
                     <ChevronLeft className="w-5 h-5 rotate-270 text-app-green" />
@@ -1658,6 +2026,74 @@ export default function App() {
                 const isIncome = analysisMode === 'Income overview' || analysisMode === 'Income flow';
                 const isFlow = analysisMode === 'Expense flow' || analysisMode === 'Income flow';
                 const isAccount = analysisMode === 'Account analysis';
+                const isBudget = analysisMode === 'Budget analysis';
+
+                if (isBudget) {
+                  const period = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+                  const monthlyBudgets = budgets.filter(b => b.period === period);
+                  const monthExpenses = expenses.filter(e => {
+                    const d = new Date(e.date);
+                    return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+                  });
+
+                  return (
+                    <div className="p-6 space-y-6">
+                      <div className="bg-white rounded-3xl p-6 shadow-sm border border-app-green/10">
+                        <h3 className="text-sm font-bold mb-4">Monthly Budget Progress</h3>
+                        <div className="space-y-6">
+                          {monthlyBudgets.length === 0 ? (
+                            <div className="text-center py-10 opacity-40">
+                              <Calculator className="w-12 h-12 mx-auto mb-2" />
+                              <p className="text-xs font-bold">No budgets set for this month</p>
+                              <button 
+                                onClick={() => setActiveTab('budgets')}
+                                className="mt-4 text-app-green text-xs font-bold underline"
+                              >
+                                Set Budgets
+                              </button>
+                            </div>
+                          ) : (
+                            monthlyBudgets.map(budget => {
+                              const cat = expenseCategories.find(c => c.name === budget.category);
+                              const spent = monthExpenses
+                                .filter(e => e.type === 'expense' && e.category === budget.category)
+                                .reduce((acc, curr) => acc + curr.amount, 0);
+                              const percent = Math.min((spent / budget.amount) * 100, 100);
+                              const isOver = spent > budget.amount;
+
+                              return (
+                                <div key={budget.id} className="space-y-2">
+                                  <div className="flex justify-between items-end">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-lg">{cat?.icon || '📁'}</span>
+                                      <span className="text-xs font-bold">{budget.category}</span>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-[10px] font-bold opacity-40 uppercase">Spent / Budget</p>
+                                      <p className={cn("text-xs font-bold", isOver ? "text-red-600" : "text-app-green")}>
+                                        {formatAmount(spent)} / {formatAmount(budget.amount)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="h-2 bg-app-green/5 rounded-full overflow-hidden">
+                                    <motion.div 
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${percent}%` }}
+                                      className={cn(
+                                        "h-full rounded-full",
+                                        isOver ? "bg-red-500" : "bg-app-green"
+                                      )}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
 
                 if (isFlow) {
                   // Flow Line Chart
@@ -1834,27 +2270,30 @@ export default function App() {
 
                       {/* Account List */}
                       <div className="space-y-4 pb-10">
-                        {accountData.map((item) => (
-                          <div key={item.name} className="flex items-center gap-4 border-b border-[#1B4332]/5 pb-4">
-                            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-2xl shadow-sm shrink-0 border border-[#1B4332]/10">
-                              {item.icon}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-bold text-sm truncate text-app-green">{item.name}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] font-bold opacity-60">This period:</span>
-                                <div className="flex items-center gap-1">
-                                  <div className="px-1.5 py-0.5 border border-red-200 rounded text-[10px] font-bold text-red-700 bg-red-50">
-                                    -{formatAmount(item.expense)}
-                                  </div>
-                                  <div className="px-1.5 py-0.5 border border-green-200 rounded text-[10px] font-bold text-green-700 bg-green-50">
-                                    {formatAmount(item.income)}
+                        {accountData.map((item) => {
+                          const acc = accounts.find(a => a.name === item.name);
+                          return (
+                            <div key={item.name} className="flex items-center gap-4 border-b border-[#1B4332]/5 pb-4">
+                              <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-2xl shadow-sm shrink-0 border border-[#1B4332]/10 overflow-hidden">
+                                <IconDisplay icon={item.icon} customIcon={acc?.customIcon} className="w-full h-full flex items-center justify-center" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-sm truncate text-app-green">{item.name}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-[10px] font-bold opacity-60">This period:</span>
+                                  <div className="flex items-center gap-1">
+                                    <div className="px-1.5 py-0.5 border border-red-200 rounded text-[10px] font-bold text-red-700 bg-red-50">
+                                      -{formatAmount(item.expense)}
+                                    </div>
+                                    <div className="px-1.5 py-0.5 border border-green-200 rounded text-[10px] font-bold text-green-700 bg-green-50">
+                                      {formatAmount(item.income)}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -1945,12 +2384,14 @@ export default function App() {
 
                         return (
                           <div key={item.name} className="flex items-center gap-4">
-                            <div className={cn(
-                              "w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm shrink-0",
-                              cat?.icon ? "bg-app-green/10 text-app-green" : "bg-gray-200"
-                            )}>
-                              {isAccount ? (cat as any)?.icon : (cat?.icon || '💸')}
-                            </div>
+                            <IconDisplay 
+                              icon={isAccount ? (cat as any)?.icon : (cat?.icon || '💸')} 
+                              customIcon={cat?.customIcon}
+                              className={cn(
+                                "w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm shrink-0",
+                                cat?.icon ? "bg-app-green/10 text-app-green" : "bg-gray-200"
+                              )}
+                            />
                             <div className="flex-1 min-w-0">
                               <div className="flex justify-between items-center mb-1">
                                 <p className="font-bold text-sm truncate">{item.name}</p>
@@ -2016,9 +2457,16 @@ export default function App() {
               {(() => {
                 const period = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
                 const monthlyBudgets = budgets.filter(b => b.period === period);
+                
+                // Use all expenses for the month, not just filtered ones
+                const monthExpenses = expenses.filter(e => {
+                  const d = new Date(e.date);
+                  return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+                });
+
                 const totalBudgetAmount = monthlyBudgets.reduce((acc, curr) => acc + curr.amount, 0);
                 const totalSpentInBudgetedCategories = monthlyBudgets.reduce((acc, budget) => {
-                  const spent = filteredExpenses
+                  const spent = monthExpenses
                     .filter(e => e.type === 'expense' && e.category === budget.category)
                     .reduce((a, c) => a + c.amount, 0);
                   return acc + spent;
@@ -2058,7 +2506,7 @@ export default function App() {
                       <h3 className="text-sm font-bold px-2">Category Budgets</h3>
                       {monthlyBudgets.map(budget => {
                       const cat = expenseCategories.find(c => c.name === budget.category);
-                      const spent = filteredExpenses
+                      const spent = monthExpenses
                         .filter(e => e.type === 'expense' && e.category === budget.category)
                         .reduce((acc, curr) => acc + curr.amount, 0);
                       
@@ -2078,10 +2526,10 @@ export default function App() {
                           <div className="flex justify-between items-center">
                             <div className="flex items-center gap-3">
                               <div className={cn(
-                                "w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-sm",
+                                "w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-sm overflow-hidden",
                                 cat?.icon ? "bg-app-green/10 text-app-green" : (cat?.color || "bg-gray-200")
                               )}>
-                                {cat?.icon || '💸'}
+                                <IconDisplay icon={cat?.icon || '💸'} customIcon={cat?.customIcon} className="w-full h-full flex items-center justify-center" />
                               </div>
                               <span className="font-bold text-sm">{budget.category}</span>
                             </div>
@@ -2144,8 +2592,8 @@ export default function App() {
                 <div className="space-y-3">
                   {accounts.map(acc => (
                     <div key={acc.id} className="bg-[#F9F9E0] border border-[#1B4332]/20 p-4 rounded-xl flex items-center gap-4 relative">
-                      <div className="w-12 h-12 bg-white border border-[#1B4332]/10 rounded-lg flex items-center justify-center text-2xl">
-                        {acc.icon}
+                      <div className="w-12 h-12 bg-white border border-[#1B4332]/10 rounded-lg flex items-center justify-center text-2xl overflow-hidden">
+                        <IconDisplay icon={acc.icon} customIcon={acc.customIcon} className="w-full h-full flex items-center justify-center" />
                       </div>
                       <div className="flex-1">
                         <p className="font-bold">{acc.name}</p>
@@ -2188,10 +2636,10 @@ export default function App() {
                   {incomeCategories.map(cat => (
                     <div key={cat.id} className="flex items-center gap-4 py-2 border-b border-[#1B4332]/5">
                       <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm", 
+                        "w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm overflow-hidden", 
                         cat.icon ? "bg-[#1B4332]/10 text-[#1B4332]" : (cat.color || "bg-gray-200")
                       )}>
-                        {cat.icon}
+                        <IconDisplay icon={cat.icon} customIcon={cat.customIcon} className="w-full h-full flex items-center justify-center" />
                       </div>
                       <span className="flex-1 font-medium">{cat.name}</span>
                       <div className="relative group">
@@ -2226,10 +2674,10 @@ export default function App() {
                   {expenseCategories.map(cat => (
                     <div key={cat.id} className="flex items-center gap-4 py-2 border-b border-[#1B4332]/5">
                       <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm", 
+                        "w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm overflow-hidden", 
                         cat.icon ? "bg-[#1B4332]/10 text-[#1B4332]" : (cat.color || "bg-gray-200")
                       )}>
-                        {cat.icon}
+                        <IconDisplay icon={cat.icon} customIcon={cat.customIcon} className="w-full h-full flex items-center justify-center" />
                       </div>
                       <span className="flex-1 font-medium">{cat.name}</span>
                       <div className="relative group">
@@ -2300,13 +2748,15 @@ export default function App() {
 
       {/* Bottom Navigation */}
       {!isLocked && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-[#FDFDF0] border-t border-[#1B4332]/10 px-2 py-2 z-30 flex justify-between items-center">
-          <NavButton active={activeTab === 'records'} onClick={() => setActiveTab('records')} icon={<FileText className="w-5 h-5" />} label="Records" />
-          <NavButton active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} icon={<PieChart className="w-5 h-5" />} label="Analysis" />
-          <NavButton active={activeTab === 'budgets'} onClick={() => setActiveTab('budgets')} icon={<Calculator className="w-5 h-5" />} label="Budgets" />
-          <NavButton active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} icon={<Wallet className="w-5 h-5" />} label="Accounts" />
-          <NavButton active={activeTab === 'categories'} onClick={() => setActiveTab('categories')} icon={<Tag className="w-5 h-5" />} label="Categories" />
-        </nav>
+        <div className="fixed bottom-0 left-0 right-0 z-30 flex justify-center">
+          <nav className="w-full max-w-2xl bg-[#FDFDF0] border-t border-[#1B4332]/10 px-2 py-2 flex justify-between items-center shadow-2xl">
+            <NavButton active={activeTab === 'records'} onClick={() => setActiveTab('records')} icon={<FileText className="w-5 h-5" />} label="Records" />
+            <NavButton active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} icon={<PieChart className="w-5 h-5" />} label="Analysis" />
+            <NavButton active={activeTab === 'budgets'} onClick={() => setActiveTab('budgets')} icon={<Calculator className="w-5 h-5" />} label="Budgets" />
+            <NavButton active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} icon={<Wallet className="w-5 h-5" />} label="Accounts" />
+            <NavButton active={activeTab === 'categories'} onClick={() => setActiveTab('categories')} icon={<Tag className="w-5 h-5" />} label="Categories" />
+          </nav>
+        </div>
       )}
 
       {/* Notification Toast */}
@@ -2330,12 +2780,12 @@ export default function App() {
       {/* Add Modal */}
       <AnimatePresence>
         {isAddModalOpen && (
-          <div className="fixed inset-0 z-[70] bg-[#FDFDF0] flex flex-col overflow-hidden">
+          <div className="fixed inset-0 z-[70] bg-black/40 flex justify-center items-center">
             <motion.div 
               initial={{ y: '100%' }} 
               animate={{ y: 0 }} 
               exit={{ y: '100%' }}
-              className="flex flex-col h-full"
+              className="w-full max-w-2xl h-full bg-[#FDFDF0] flex flex-col overflow-hidden shadow-2xl"
             >
               {/* Header */}
               <div className="flex justify-between items-center px-4 py-4 shrink-0">
@@ -2396,46 +2846,69 @@ export default function App() {
 
               {/* Notes */}
               <div className="px-4 mb-4 flex-1 flex flex-col min-h-0">
+                <div className="flex justify-between items-center mb-2 shrink-0">
+                  <label className="text-[10px] font-bold uppercase opacity-40 tracking-widest ml-1">Notes</label>
+                  {isNoteFocused && (
+                    <button 
+                      onClick={() => {
+                        setIsNoteFocused(false);
+                        (document.activeElement as HTMLElement)?.blur();
+                      }}
+                      className="text-[10px] font-bold text-app-green uppercase tracking-widest bg-app-green/10 px-3 py-1 rounded-full"
+                    >
+                      Done
+                    </button>
+                  )}
+                </div>
                 <textarea 
-                  placeholder="Add notes"
+                  placeholder="What was this for?"
                   value={newExpense.note}
                   onChange={(e) => setNewExpense({...newExpense, note: e.target.value})}
-                  className="w-full flex-1 bg-[#FFFBEB] border border-app-green/20 rounded-2xl p-4 text-sm focus:ring-0 outline-none resize-none shadow-inner"
+                  onFocus={() => setIsNoteFocused(true)}
+                  onBlur={() => {
+                    // Small delay to allow clicking the "Done" button
+                    setTimeout(() => setIsNoteFocused(false), 100);
+                  }}
+                  className="w-full flex-1 bg-[#FFFBEB] border border-app-green/20 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-app-green/20 focus:border-app-green outline-none resize-none shadow-inner transition-all"
                 />
               </div>
 
               {/* Amount Display */}
-              <div className="px-6 py-4 flex items-center justify-between gap-4 border-t border-app-green/10 bg-white shrink-0">
-                <div className="flex-1 text-right overflow-hidden">
-                  <div className="text-5xl font-bold text-app-green truncate">
-                    {calculatorInput}
+              {!isNoteFocused && (
+                <div className="px-6 py-4 flex items-center justify-between gap-4 border-t border-app-green/10 bg-white shrink-0 animate-in slide-in-from-bottom duration-300">
+                  <div className="flex-1 text-right overflow-hidden">
+                    <div className="text-5xl font-bold text-app-green truncate tracking-tight">
+                      {calculatorInput}
+                    </div>
                   </div>
+                  <button onClick={() => handleCalculatorClick('back')} className="p-3 bg-app-green/5 rounded-2xl active:scale-90 transition-transform hover:bg-app-green/10">
+                    <Delete className="w-8 h-8 text-app-green/60" />
+                  </button>
                 </div>
-                <button onClick={() => handleCalculatorClick('back')} className="p-2 active:scale-90 transition-transform">
-                  <Delete className="w-8 h-8 opacity-60" />
-                </button>
-              </div>
+              )}
 
               {/* Calculator Keypad */}
-              <div className="grid grid-cols-4 gap-[1px] bg-app-green/20 shrink-0 border-t border-app-green/10">
-                {[
-                  { label: '+', val: '+' }, { label: '7', val: '7' }, { label: '8', val: '8' }, { label: '9', val: '9' },
-                  { label: '-', val: '-' }, { label: '4', val: '4' }, { label: '5', val: '5' }, { label: '6', val: '6' },
-                  { label: '×', val: '×' }, { label: '1', val: '1' }, { label: '2', val: '2' }, { label: '3', val: '3' },
-                  { label: '÷', val: '÷' }, { label: '0', val: '0' }, { label: '.', val: '.' }, { label: '=', val: '=' }
-                ].map((btn, idx) => (
-                  <button 
-                    key={idx}
-                    onClick={() => handleCalculatorClick(btn.val)}
-                    className={cn(
-                      "h-16 text-xl font-bold transition-all active:bg-app-green/10",
-                      ['+', '-', '×', '÷'].includes(btn.val) || btn.val === '=' ? "bg-[#719686] text-white" : "bg-white text-app-green"
-                    )}
-                  >
-                    {btn.label}
-                  </button>
-                ))}
-              </div>
+              {!isNoteFocused && (
+                <div className="grid grid-cols-4 gap-[1px] bg-app-green/10 shrink-0 border-t border-app-green/10 animate-in slide-in-from-bottom duration-300">
+                  {[
+                    { label: '+', val: '+' }, { label: '7', val: '7' }, { label: '8', val: '8' }, { label: '9', val: '9' },
+                    { label: '-', val: '-' }, { label: '4', val: '4' }, { label: '5', val: '5' }, { label: '6', val: '6' },
+                    { label: '×', val: '×' }, { label: '1', val: '1' }, { label: '2', val: '2' }, { label: '3', val: '3' },
+                    { label: '÷', val: '÷' }, { label: '0', val: '0' }, { label: '.', val: '.' }, { label: '=', val: '=' }
+                  ].map((btn, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => handleCalculatorClick(btn.val)}
+                      className={cn(
+                        "h-16 text-xl font-bold transition-all active:bg-app-green/20",
+                        ['+', '-', '×', '÷'].includes(btn.val) || btn.val === '=' ? "bg-[#719686] text-white hover:bg-[#5f7d70]" : "bg-white text-app-green hover:bg-gray-50"
+                      )}
+                    >
+                      {btn.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Footer */}
               <div className="flex border-t border-app-green/10 bg-white shrink-0">
@@ -2483,8 +2956,8 @@ export default function App() {
                       newExpense.account === a.name ? "bg-app-green text-white shadow-md" : "bg-app-green/5 hover:bg-app-green/10"
                     )}
                   >
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
-                      {a.icon}
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl overflow-hidden">
+                      <IconDisplay icon={a.icon} customIcon={a.customIcon} className="w-full h-full flex items-center justify-center" />
                     </div>
                     <span className="font-bold">{a.name}</span>
                   </button>
@@ -2518,8 +2991,8 @@ export default function App() {
                       newExpense.toAccount === a.name ? "bg-app-green text-white shadow-md" : "bg-app-green/5 hover:bg-app-green/10"
                     )}
                   >
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
-                      {a.icon}
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl overflow-hidden">
+                      <IconDisplay icon={a.icon} customIcon={a.customIcon} className="w-full h-full flex items-center justify-center" />
                     </div>
                     <span className="font-bold">{a.name}</span>
                   </button>
@@ -2553,8 +3026,8 @@ export default function App() {
                       newExpense.category === c.name ? "bg-app-green text-white shadow-md" : "bg-app-green/5 hover:bg-app-green/10"
                     )}
                   >
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
-                      {c.icon}
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl overflow-hidden">
+                      <IconDisplay icon={c.icon} customIcon={c.customIcon} className="w-full h-full flex items-center justify-center" />
                     </div>
                     <span className="font-bold">{c.name}</span>
                   </button>
@@ -2618,42 +3091,102 @@ export default function App() {
         {isAccountModalOpen && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAccountModalOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-sm bg-[#FDFDF0] rounded-3xl p-6 shadow-2xl">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">{editingAccount ? 'Edit Account' : 'Add Account'}</h2>
-                <button onClick={() => setIsAccountModalOpen(false)} className="p-2 bg-app-green/5 rounded-full"><X className="w-5 h-5" /></button>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-sm bg-[#FDFDF0] rounded-3xl p-6 shadow-2xl max-h-[90vh] flex flex-col border border-app-green/10">
+              <div className="flex justify-between items-center mb-6 shrink-0 border-b border-app-green/5 pb-4">
+                <h2 className="text-xl font-bold text-app-green">{editingAccount ? 'Edit Account' : 'Add Account'}</h2>
+                <button onClick={() => setIsAccountModalOpen(false)} className="p-2 bg-app-green/5 rounded-full hover:bg-app-green/10 transition-colors"><X className="w-5 h-5 text-app-green" /></button>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-bold uppercase opacity-40 mb-1 block">Account Name</label>
-                  <input type="text" value={newAccount.name} onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })} className="w-full bg-app-green/5 border-none rounded-xl p-3 text-sm focus:ring-1 focus:ring-app-green" placeholder="e.g. Bank Account" />
+              <div className="space-y-6 overflow-y-auto flex-1 pr-1 custom-scrollbar py-2">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-app-green/50 tracking-widest ml-1">Account Name</label>
+                  <input type="text" value={newAccount.name} onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })} className="w-full bg-white border border-app-green/10 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-app-green/20 focus:border-app-green outline-none transition-all" placeholder="e.g. Bank Account" />
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-bold uppercase opacity-40 mb-1 block">Initial Balance</label>
-                  <input type="number" value={newAccount.initial || ''} onChange={(e) => setNewAccount({ ...newAccount, initial: Number(e.target.value) })} className="w-full bg-app-green/5 border-none rounded-xl p-3 text-sm focus:ring-1 focus:ring-app-green" placeholder="0.00" />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-app-green/50 tracking-widest ml-1">Initial Balance</label>
+                  <input type="number" value={newAccount.initial || ''} onChange={(e) => setNewAccount({ ...newAccount, initial: Number(e.target.value) })} className="w-full bg-white border border-app-green/10 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-app-green/20 focus:border-app-green outline-none transition-all" placeholder="0.00" />
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-bold uppercase opacity-40 mb-2 block">Icon</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {ACCOUNT_ICONS.map(icon => (
-                      <button 
-                        key={icon} 
-                        onClick={() => setNewAccount({ ...newAccount, icon })}
-                        className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center text-xl transition-all",
-                          newAccount.icon === icon ? "bg-app-green text-white shadow-md" : "bg-app-green/5 hover:bg-app-green/10"
-                        )}
-                      >
-                        {icon}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-app-green/50 tracking-widest ml-1">Custom Icon (Image/Link)</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={newAccount.customIcon || ''} 
+                      onChange={(e) => setNewAccount({ ...newAccount, customIcon: e.target.value })} 
+                      className="flex-1 bg-white border border-app-green/10 rounded-2xl p-4 text-xs font-medium focus:ring-2 focus:ring-app-green/20 focus:border-app-green outline-none transition-all" 
+                      placeholder="Paste image link here" 
+                    />
+                    <label className="bg-app-green/10 p-4 rounded-2xl cursor-pointer hover:bg-app-green/20 transition-colors flex items-center justify-center">
+                      <ImagePlus className="w-5 h-5 text-app-green" />
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setNewAccount({ ...newAccount, customIcon: reader.result as string });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {newAccount.customIcon && (
+                    <div className="mt-3 p-3 bg-app-green/5 rounded-2xl flex items-center justify-between border border-app-green/10">
+                      <div className="flex items-center gap-3">
+                        <img src={newAccount.customIcon} alt="Preview" className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm" referrerPolicy="no-referrer" />
+                        <span className="text-[10px] font-bold text-app-green/60 uppercase">Preview</span>
+                      </div>
+                      <button onClick={() => setNewAccount({ ...newAccount, customIcon: '' })} className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors">
+                        <X className="w-4 h-4" />
                       </button>
-                    ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold uppercase text-app-green/50 tracking-widest ml-1">Icon</label>
+                  <div className="grid grid-cols-4 gap-4 p-1">
+                    {ACCOUNT_ICONS.map((icon, idx) => {
+                      const bgColors = [
+                        'bg-blue-50 text-blue-600 border-blue-100',
+                        'bg-green-50 text-green-600 border-green-100',
+                        'bg-purple-50 text-purple-600 border-purple-100',
+                        'bg-orange-50 text-orange-600 border-orange-100',
+                        'bg-pink-50 text-pink-600 border-pink-100',
+                        'bg-teal-50 text-teal-600 border-teal-100',
+                        'bg-indigo-50 text-indigo-600 border-indigo-100',
+                        'bg-red-50 text-red-600 border-red-100',
+                      ];
+                      const colorClass = bgColors[idx % bgColors.length];
+                      
+                      return (
+                        <button 
+                          key={icon} 
+                          onClick={() => setNewAccount({ ...newAccount, icon })}
+                          className={cn(
+                            "w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-sm border",
+                            newAccount.icon === icon 
+                              ? "bg-app-green text-white shadow-lg scale-110 border-app-green" 
+                              : `${colorClass} hover:scale-105`
+                          )}
+                        >
+                          <IconDisplay icon={icon} className="w-6 h-6" />
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
+              </div>
 
-                <button onClick={handleAddAccount} className="w-full bg-app-green text-white py-3 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-transform mt-2">
+              <div className="pt-4 shrink-0">
+                <button onClick={handleAddAccount} className="w-full bg-app-green text-white py-4 rounded-2xl font-bold text-sm shadow-xl active:scale-95 transition-all hover:bg-app-green/90">
                   {editingAccount ? 'Update Account' : 'Create Account'}
                 </button>
               </div>
@@ -2816,59 +3349,119 @@ export default function App() {
         {isCategoryModalOpen && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCategoryModalOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-sm bg-app-bg rounded-3xl p-6 shadow-2xl">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">{editingCategory ? 'Edit Category' : 'Add Category'}</h2>
-                <button onClick={() => setIsCategoryModalOpen(false)} className="p-2 bg-app-green/5 rounded-full"><X className="w-5 h-5" /></button>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-sm bg-app-bg rounded-3xl p-6 shadow-2xl max-h-[90vh] flex flex-col border border-app-green/10">
+              <div className="flex justify-between items-center mb-6 shrink-0 border-b border-app-green/5 pb-4">
+                <h2 className="text-xl font-bold text-app-green">{editingCategory ? 'Edit Category' : 'Add Category'}</h2>
+                <button onClick={() => setIsCategoryModalOpen(false)} className="p-2 bg-app-green/5 rounded-full hover:bg-app-green/10 transition-colors"><X className="w-5 h-5 text-app-green" /></button>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex gap-2 p-1 bg-app-green/5 rounded-xl">
-                  <button onClick={() => setNewCategory({...newCategory, type: 'expense'})} className={cn("flex-1 py-2 rounded-lg text-sm font-bold transition-all", newCategory.type === 'expense' ? "bg-white shadow-sm" : "opacity-50")}>Expense</button>
-                  <button onClick={() => setNewCategory({...newCategory, type: 'income'})} className={cn("flex-1 py-2 rounded-lg text-sm font-bold transition-all", newCategory.type === 'income' ? "bg-white shadow-sm" : "opacity-50")}>Income</button>
+              <div className="space-y-6 overflow-y-auto flex-1 pr-1 custom-scrollbar py-2">
+                <div className="flex gap-2 p-1.5 bg-app-green/5 rounded-2xl">
+                  <button onClick={() => setNewCategory({...newCategory, type: 'expense'})} className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all", newCategory.type === 'expense' ? "bg-white text-app-green shadow-sm" : "text-app-green/40")}>Expense</button>
+                  <button onClick={() => setNewCategory({...newCategory, type: 'income'})} className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all", newCategory.type === 'income' ? "bg-white text-app-green shadow-sm" : "text-app-green/40")}>Income</button>
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-bold uppercase opacity-40 mb-1 block">Category Name</label>
-                  <input type="text" value={newCategory.name} onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })} className="w-full bg-app-green/5 border-none rounded-xl p-3 text-sm focus:ring-1 focus:ring-app-green" placeholder="e.g. Food" />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-app-green/50 tracking-widest ml-1">Category Name</label>
+                  <input type="text" value={newCategory.name} onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })} className="w-full bg-white border border-app-green/10 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-app-green/20 focus:border-app-green outline-none transition-all" placeholder="e.g. Food & Drinks" />
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-bold uppercase opacity-40 mb-2 block">Icon (Clears Color)</label>
-                  <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto p-1">
-                    {CATEGORY_ICONS.map(icon => (
-                      <button 
-                        key={icon} 
-                        onClick={() => setNewCategory({ ...newCategory, icon, color: '' })}
-                        className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-all",
-                          newCategory.icon === icon ? "bg-app-green text-white shadow-md" : "bg-app-green/5 hover:bg-app-green/10"
-                        )}
-                      >
-                        {icon}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-app-green/50 tracking-widest ml-1">Custom Icon (Image/Link)</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={newCategory.customIcon || ''} 
+                      onChange={(e) => setNewCategory({ ...newCategory, customIcon: e.target.value })} 
+                      className="flex-1 bg-white border border-app-green/10 rounded-2xl p-4 text-xs font-medium focus:ring-2 focus:ring-app-green/20 focus:border-app-green outline-none transition-all" 
+                      placeholder="Paste image link here" 
+                    />
+                    <label className="bg-app-green/10 p-4 rounded-2xl cursor-pointer hover:bg-app-green/20 transition-colors flex items-center justify-center">
+                      <ImagePlus className="w-5 h-5 text-app-green" />
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setNewCategory({ ...newCategory, customIcon: reader.result as string });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {newCategory.customIcon && (
+                    <div className="mt-3 p-3 bg-app-green/5 rounded-2xl flex items-center justify-between border border-app-green/10">
+                      <div className="flex items-center gap-3">
+                        <img src={newCategory.customIcon} alt="Preview" className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm" referrerPolicy="no-referrer" />
+                        <span className="text-[10px] font-bold text-app-green/60 uppercase">Preview</span>
+                      </div>
+                      <button onClick={() => setNewCategory({ ...newCategory, customIcon: '' })} className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors">
+                        <X className="w-4 h-4" />
                       </button>
-                    ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold uppercase text-app-green/50 tracking-widest ml-1">Icon (Clears Color)</label>
+                  <div className="grid grid-cols-5 gap-3 p-1">
+                    {CATEGORY_ICONS.map((icon, idx) => {
+                      const bgColors = [
+                        'bg-red-50 text-red-600 border-red-100',
+                        'bg-blue-50 text-blue-600 border-blue-100',
+                        'bg-green-50 text-green-600 border-green-100',
+                        'bg-purple-50 text-purple-600 border-purple-100',
+                        'bg-orange-50 text-orange-600 border-orange-100',
+                        'bg-pink-50 text-pink-600 border-pink-100',
+                        'bg-teal-50 text-teal-600 border-teal-100',
+                        'bg-indigo-50 text-indigo-600 border-indigo-100',
+                      ];
+                      const colorClass = bgColors[idx % bgColors.length];
+                      
+                      return (
+                        <button 
+                          key={icon} 
+                          onClick={() => setNewCategory({ ...newCategory, icon, color: '' })}
+                          className={cn(
+                            "w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-sm border",
+                            newCategory.icon === icon 
+                              ? "bg-app-green text-white shadow-lg scale-110 border-app-green" 
+                              : `${colorClass} hover:scale-105`
+                          )}
+                        >
+                          <IconDisplay icon={icon} className="w-5 h-5" />
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-bold uppercase opacity-40 mb-2 block">Color (Clears Icon)</label>
-                  <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto p-1">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold uppercase text-app-green/50 tracking-widest ml-1">Color (Clears Icon)</label>
+                  <div className="grid grid-cols-5 gap-3 p-1">
                     {CATEGORY_COLORS.map(color => (
                       <button 
                         key={color} 
                         onClick={() => setNewCategory({ ...newCategory, color, icon: '' })}
                         className={cn(
-                          "w-10 h-10 rounded-full transition-all border-2",
+                          "w-12 h-12 rounded-full transition-all border-4",
                           color,
-                          newCategory.color === color ? "border-app-green scale-110 shadow-md" : "border-transparent"
+                          newCategory.color === color ? "border-app-green scale-110 shadow-lg" : "border-white shadow-sm"
                         )}
                       />
                     ))}
                   </div>
                 </div>
+              </div>
 
-                <button onClick={handleAddCategory} className="w-full bg-app-green text-white py-3 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-transform mt-2">
+              <div className="pt-4 shrink-0">
+                <button onClick={handleAddCategory} className="w-full bg-app-green text-white py-4 rounded-2xl font-bold text-sm shadow-xl active:scale-95 transition-all hover:bg-app-green/90">
                   {editingCategory ? 'Update Category' : 'Create Category'}
                 </button>
               </div>
@@ -2882,13 +3475,13 @@ export default function App() {
         {isBudgetModalOpen && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsBudgetModalOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-sm bg-[#FDFDF0] rounded-3xl p-6 shadow-2xl">
-              <div className="flex justify-between items-center mb-6">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-sm bg-[#FDFDF0] rounded-3xl p-6 shadow-2xl max-h-[90vh] flex flex-col">
+              <div className="flex justify-between items-center mb-6 shrink-0">
                 <h2 className="text-xl font-bold">{editingBudget ? 'Edit Budget' : 'Set Budget'}</h2>
                 <button onClick={() => setIsBudgetModalOpen(false)} className="p-2 bg-app-green/5 rounded-full"><X className="w-5 h-5" /></button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 overflow-y-auto flex-1 pr-1 custom-scrollbar">
                 <div>
                   <label className="text-[10px] font-bold uppercase opacity-40 mb-1 block">Category</label>
                   <select 
@@ -2911,23 +3504,23 @@ export default function App() {
                     autoFocus 
                   />
                 </div>
+              </div>
 
-                <div className="flex gap-3 mt-4">
-                  {editingBudget && (
-                    <button 
-                      onClick={() => handleDeleteBudget(editingBudget.id)} 
-                      className="flex-1 bg-red-50 text-red-700 py-3 rounded-xl font-bold text-sm active:scale-95 transition-transform"
-                    >
-                      Delete
-                    </button>
-                  )}
+              <div className="flex gap-3 mt-6 shrink-0">
+                {editingBudget && (
                   <button 
-                    onClick={handleAddBudget} 
-                    className="flex-[2] bg-app-green text-white py-3 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-transform"
+                    onClick={() => handleDeleteBudget(editingBudget.id)} 
+                    className="flex-1 bg-red-50 text-red-700 py-3 rounded-xl font-bold text-sm active:scale-95 transition-transform"
                   >
-                    {editingBudget ? 'Update Budget' : 'Set Budget'}
+                    Delete
                   </button>
-                </div>
+                )}
+                <button 
+                  onClick={handleAddBudget} 
+                  className="flex-[2] bg-app-green text-white py-3 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-transform"
+                >
+                  {editingBudget ? 'Update Budget' : 'Set Budget'}
+                </button>
               </div>
             </motion.div>
           </div>
@@ -3110,7 +3703,147 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Passcode Modal (Lock Screen) */}
+      {/* Management Modal */}
+      <AnimatePresence>
+        {isManagementModalOpen && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setIsManagementModalOpen(false)} 
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.9, opacity: 0 }} 
+              className="relative w-full max-w-md bg-app-bg rounded-[32px] overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
+            >
+              <div className="p-6 border-b border-app-green/10 flex justify-between items-center bg-white">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-app-green/10 rounded-xl">
+                    <Database className="w-6 h-6 text-app-green" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Data Management</h2>
+                    <p className="text-[10px] opacity-50 uppercase tracking-widest">Backup & Restore</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsManagementModalOpen(false)} className="p-2 hover:bg-app-green/5 rounded-full transition-colors">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                {/* Local Backup Section */}
+                <section className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
+                    <FolderOpen className="w-3 h-3" /> Local Storage
+                  </h3>
+                  
+                  <div className="bg-white rounded-2xl p-4 border border-app-green/10 space-y-4 shadow-sm">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-sm font-bold">Backup Folder</p>
+                        <p className="text-[10px] opacity-50">Local storage</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <button 
+                        onClick={handleBackup}
+                        className="flex flex-col items-center gap-2 p-4 bg-app-green/5 rounded-2xl hover:bg-app-green/10 transition-all active:scale-95"
+                      >
+                        <CloudUpload className="w-6 h-6 text-app-green" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Backup File</span>
+                      </button>
+                      
+                      <div className="relative">
+                        <button 
+                          className="w-full flex flex-col items-center gap-2 p-4 bg-app-green/5 rounded-2xl hover:bg-app-green/10 transition-all active:scale-95"
+                        >
+                          <CloudDownload className="w-6 h-6 text-app-green" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Restore Data</span>
+                        </button>
+                        <input 
+                          type="file" 
+                          accept=".enc" 
+                          onChange={handleRestore} 
+                          className="absolute inset-0 opacity-0 cursor-pointer" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Cloud Backup Section */}
+                <section className="space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
+                    <Cloud className="w-3 h-3" /> Firebase Cloud Sync
+                  </h3>
+
+                  <div className="bg-white rounded-2xl p-4 border border-app-green/10 space-y-4 shadow-sm">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center",
+                          user ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
+                        )}>
+                          <Cloud className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold">Cloud Status</p>
+                          <p className="text-[10px] opacity-50">
+                            {user ? 'Connected & Syncing' : 'Not connected'}
+                          </p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={user ? logout : loginWithGoogle}
+                        className={cn(
+                          "px-4 py-2 text-xs font-bold rounded-xl transition-colors",
+                          user ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        )}
+                      >
+                        {user ? 'Logout' : 'Login'}
+                      </button>
+                    </div>
+
+                    {user && (
+                      <div className="pt-4 border-t border-app-green/5 space-y-4">
+                        <div className="flex justify-between items-center text-[10px]">
+                          <span className="opacity-50 uppercase tracking-widest">Last Sync:</span>
+                          <span className="font-bold">{lastSynced ? lastSynced.toLocaleString() : 'Never'}</span>
+                        </div>
+
+                        <button 
+                          disabled={isSyncing}
+                          onClick={handleSyncLocalToCloud}
+                          className="w-full flex items-center justify-center gap-2 py-3 bg-app-green text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-all disabled:opacity-50"
+                        >
+                          {isSyncing ? <RefreshCw className="w-3 h-3 animate-spin" /> : <CloudUpload className="w-3 h-3" />}
+                          Upload Local Data to Cloud
+                        </button>
+                        
+                        <p className="text-[9px] text-center opacity-40 italic">
+                          * Data is automatically synced in real-time when online.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
+              
+              <div className="p-6 bg-app-green/5 border-t border-app-green/10">
+                <p className="text-[10px] text-center opacity-50 leading-relaxed">
+                  Your data is encrypted locally before being uploaded to Google Drive. Only you can access your backup files.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {isPasscodeModalOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center bg-app-bg">
@@ -3291,6 +4024,7 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }
