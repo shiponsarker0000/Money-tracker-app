@@ -18,6 +18,12 @@ service cloud.firestore {
     //
     // Collection: /users/{userId}/settings/main
     // Fields: currencySymbol, currencyPosition, decimalPlaces, uiMode, passcode, reminderEnabled, currentThemeId
+    //
+    // Collection: /users/{userId}/activityLogs/{logId}
+    // Fields: checked, value, updatedAt
+    //
+    // Collection: /users/{userId}/notes/{noteId}
+    // Fields: id, date, content, updatedAt
     // ===============================================================
 
     // ===============================================================
@@ -33,8 +39,11 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "shiponsarker2023@gmail.com" && request.auth.token.email_verified == true));
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          (request.auth.token.email == "shiponsarker2023@gmail.com" && request.auth.token.email_verified == true)
+        );
     }
 
     function isValidString(val, min, max) {
@@ -70,6 +79,31 @@ service cloud.firestore {
 
       match /settings/{settingId} {
         allow read, write: if isOwner(userId) || isAdmin();
+      }
+
+      match /activityLogs/{logId} {
+        // Data validation for activity logs
+        function isValidActivityLog(data) {
+          return (data.checked is bool || data.value is number) &&
+                 (!('updatedAt' in data) || data.updatedAt is timestamp);
+        }
+
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidActivityLog(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /notes/{noteId} {
+        function isValidNote(data) {
+          return data.id is string &&
+                 data.date is string &&
+                 data.content is string &&
+                 (!('updatedAt' in data) || data.updatedAt is timestamp);
+        }
+
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidNote(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
       }
     }
   }

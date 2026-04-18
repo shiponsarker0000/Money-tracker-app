@@ -1,5 +1,5 @@
 {
-  "name": "Expense Tracker (Offline Encrypted Backup)",
-  "description": "An expense tracker with manual offline encrypted backup and restore functionality.",
+  "name": "MyLife - Habit & Finance Tracker",
+  "description": "A comprehensive mobile-first application for tracking daily habits, rich-text notes, and financial expenses with cloud sync.",
   "requestFramePermissions": []
 }

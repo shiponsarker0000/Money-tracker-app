@@ -69,6 +69,28 @@
         "reminderEnabled": { "type": "boolean" },
         "currentThemeId": { "type": "string" }
       }
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "A record of a completed daily activity",
+      "type": "object",
+      "properties": {
+        "checked": { "type": "boolean" },
+        "value": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Note": {
+      "title": "Note",
+      "description": "A daily rich text note",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "content": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "date", "content"]
     }
   },
   "firestore": {
@@ -91,6 +113,14 @@
     "/users/{userId}/settings/main": {
       "schema": { "$ref": "Settings" },
       "description": "User's global settings"
+    },
+    "/users/{userId}/activityLogs/{logId}": {
+      "schema": { "$ref": "ActivityLog" },
+      "description": "User's daily activity completion records"
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": { "$ref": "Note" },
+      "description": "User's daily rich text notes"
     }
   }
 }

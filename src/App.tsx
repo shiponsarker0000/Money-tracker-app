@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Menu, 
-  Search, 
   ChevronLeft, 
   ChevronRight, 
   ChevronsLeft,
@@ -78,7 +77,34 @@ import {
   Smartphone,
   CreditCard,
   Globe,
-  Coins
+  Coins,
+  Languages,
+  Book,
+  Monitor,
+  Briefcase as WorkIcon,
+  CheckCircle2,
+  ListTodo,
+  ListPlus,
+  Search,
+  Redo,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  Image as ImageIcon,
+  Mic,
+  CheckSquare,
+  History,
+  Moon,
+  Library,
+  BookOpen,
+  ArrowBigRightDash,
+  LayoutDashboard,
+  FileDown,
+  Minimize,
+  Maximize,
+  Scaling,
+  Edit3,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LineChart, Line, AreaChart, Area } from 'recharts';
@@ -114,8 +140,14 @@ import {
 } from 'firebase/firestore';
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  Car, Shirt, Utensils, GraduationCap, Users, Gift, Stethoscope, ShoppingBag, Phone, Bus, Sparkles, Cpu, Tv, Share2, Trophy, Receipt, Home, Zap, Wifi, PiggyBank, MoreHorizontal, Banknote, Laptop, Store, TrendingUp, Medal, Ticket, Heart, RotateCcw, PlusCircle, Briefcase, Terminal, Key, LucideLineChart, Award, Package, Undo, HandCoins, Wallet, Tag, ShieldCheck, Calendar, Clock, Database, RefreshCw, FolderOpen, Cloud, Save, Delete, Check, X, ImagePlus, Mail, ThumbsUp, Star, SettingsIcon, Upload, Download, Filter, Plus, FileText, PieChart, Calculator, Menu, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Building2, Smartphone, CreditCard, Globe, Coins
+  Car, Shirt, Utensils, GraduationCap, Users, Gift, Stethoscope, ShoppingBag, Phone, Bus, Sparkles, Cpu, Tv, Share2, Trophy, Receipt, Home, Zap, Wifi, PiggyBank, MoreHorizontal, Banknote, Laptop, Store, TrendingUp, Medal, Ticket, Heart, RotateCcw, PlusCircle, Briefcase, Terminal, Key, LucideLineChart, Award, Package, Undo, HandCoins, Wallet, Tag, ShieldCheck, Calendar, Clock, Database, RefreshCw, FolderOpen, Cloud, Save, Delete, Check, X, ImagePlus, Mail, ThumbsUp, Star, SettingsIcon, Upload, Download, Filter, Plus, FileText, PieChart, Calculator, Menu, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Building2, Smartphone, CreditCard, Globe, Coins, Languages, Book, Monitor, CheckCircle2, ListTodo, History, Moon, Library, BookOpen, ArrowBigRightDash, Redo, Bold, Italic, Underline, List, ImageIcon, Mic, CheckSquare
 };
+
+const HABIT_ICONS = [
+  'Languages', 'Book', 'Monitor', 'Briefcase', 'Heart', 'Library', 'History', 'ArrowBigRightDash', 'Moon', 'GraduationCap',
+  'Zap', 'Sunrise', 'Coffee', 'Utensils', 'Dumbbell', 'Bath', 'Camera', 'Music', 'CheckCircle2', 'Flame', 'Sparkles',
+  'Smile', 'Frown', 'Pizza', 'Beer', 'Drip', 'Brush', 'PenTool', 'Palette', 'Code', 'Terminal'
+];
 
 const IconDisplay = ({ icon, customIcon, className, color }: { icon: string, customIcon?: string, className?: string, color?: string }) => {
   if (customIcon) {
@@ -226,6 +258,35 @@ const THEMES: Theme[] = [
 ];
 
 export default function App() {
+  const [isActivityProtocolOpen, setIsActivityProtocolOpen] = useState(false);
+  const [activities, setActivities] = useState<{id: string, name: string, icon: string, type: 'boolean' | 'star' | 'number', iconUrl?: string, starCount?: number}[]>([
+    { id: 'english', name: 'ENGLISH', icon: 'Languages', type: 'boolean' },
+    { id: 'bangla', name: 'BANGLA', icon: 'Book', type: 'boolean' },
+    { id: 'computer', name: 'COMPUTER', icon: 'Monitor', type: 'boolean' },
+    { id: 'office', name: 'OFFICE', icon: 'Briefcase', type: 'boolean' },
+    { id: 'prayer', name: 'PRAYER', icon: 'Heart', type: 'star', starCount: 5 },
+    { id: 'quran', name: 'QURAN', icon: 'Library', type: 'boolean' },
+    { id: 'history', name: 'HISTORY', icon: 'History', type: 'boolean' },
+    { id: 'tomorrow', name: 'TOMORROW', icon: 'ArrowBigRightDash', type: 'boolean' },
+    { id: 'sleepy', name: 'SLEEPY', icon: 'Moon', type: 'boolean' },
+    { id: 'class', name: 'CLASS', icon: 'GraduationCap', type: 'boolean' },
+  ]);
+  const [activityLogs, setActivityLogs] = useState<Record<string, boolean | number>>({});
+  const [currentProtocolDate, setCurrentProtocolDate] = useState(new Date());
+  const [notes, setNotes] = useState<{id: string, date: string, content: string}[]>([]);
+  const [searchQueryProtocol, setSearchQueryProtocol] = useState('');
+  const [activeProtocolTab, setActiveProtocolTab] = useState<'tracker' | 'notes'>('tracker');
+  const [protocolTrackerMode, setProtocolTrackerMode] = useState<'daily' | 'monthly'>('daily');
+  const [selectedProtocolDay, setSelectedProtocolDay] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedNoteDate, setSelectedNoteDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const [isSplashScreenVisible, setIsSplashScreenVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsSplashScreenVisible(false), 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'records' | 'analysis' | 'budgets' | 'accounts' | 'categories'>('records');
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([
@@ -290,6 +351,14 @@ export default function App() {
   const [currentTheme, setCurrentTheme] = useState<Theme>(THEMES[0]);
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Daily Habits Enhancement States
+  const [habitUIScale, setHabitUIScale] = useState(1);
+  const [habitViewTab, setHabitViewTab] = useState<'home' | 'progress' | 'settings'>('home');
+  const [habitStatsRange, setHabitStatsRange] = useState<'1m' | '3m' | '6m' | '1y'>('1m');
+  const [isHabitSettingsOpen, setIsHabitSettingsOpen] = useState(false);
+  const [habitSettingsTab, setHabitSettingsTab] = useState<'columns' | 'export' | 'mode' | 'date' | 'scale'>('columns');
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
+  
   // Calculator and Selector States
   const [calculatorInput, setCalculatorInput] = useState('0');
   const [isAccountSelectorOpen, setIsAccountSelectorOpen] = useState(false);
@@ -322,6 +391,167 @@ export default function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
+
+  // Activity Logs Sync
+  useEffect(() => {
+    if (!user) {
+      const saved = localStorage.getItem('mymoney_activity_logs');
+      if (saved) setActivityLogs(JSON.parse(saved));
+      return;
+    }
+
+    const q = query(collection(db, `users/${user.uid}/activityLogs`));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const logs: Record<string, boolean | number> = {};
+      snapshot.docs.forEach(doc => {
+        logs[doc.id] = doc.data().value !== undefined ? doc.data().value : doc.data().checked;
+      });
+      setActivityLogs(logs);
+      localStorage.setItem('mymoney_activity_logs', JSON.stringify(logs));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/activityLogs`);
+    });
+
+    const notesQ = query(collection(db, `users/${user.uid}/notes`), orderBy('date', 'desc'));
+    const unsubNotes = onSnapshot(notesQ, (snapshot) => {
+      const notesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as {id: string, date: string, content: string}));
+      setNotes(notesData);
+      localStorage.setItem('mymoney_notes', JSON.stringify(notesData));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/notes`);
+    });
+
+    return () => {
+      unsubscribe();
+      unsubNotes();
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      localStorage.setItem('mymoney_notes', JSON.stringify(notes));
+    }
+  }, [notes, user]);
+
+  const toggleActivityLog = async (logKey: string, val?: boolean | number) => {
+    const isStar = activities.find(a => logKey.endsWith(a.id))?.type === 'star';
+    const currentValue = activityLogs[logKey];
+    const newValue = val !== undefined ? val : !currentValue;
+    
+    setActivityLogs(prev => ({ ...prev, [logKey]: newValue }));
+    
+    if (user) {
+      try {
+        await setDoc(doc(db, `users/${user.uid}/activityLogs`, logKey), {
+          value: newValue,
+          checked: !!newValue, // fallback for old schema
+          updatedAt: serverTimestamp()
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}/activityLogs/${logKey}`);
+      }
+    }
+  };
+
+  const saveNote = async (date: string, content: string) => {
+    const existing = notes.find(n => n.date === date);
+    const noteId = existing?.id || `note_${date}`;
+    
+    const newNote = { id: noteId, date, content };
+    setNotes(prev => {
+      const index = prev.findIndex(n => n.date === date);
+      if (index >= 0) {
+        const updated = [...prev];
+        updated[index] = newNote;
+        return updated;
+      }
+      return [...prev, newNote];
+    });
+
+    if (user) {
+      try {
+        await setDoc(doc(db, `users/${user.uid}/notes`, noteId), {
+          id: noteId,
+          date,
+          content,
+          updatedAt: serverTimestamp()
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}/notes/${noteId}`);
+      }
+    }
+  };
+
+  const getDayScore = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    let totalValue = 0;
+    let count = 0;
+    activities.forEach(act => {
+      const key = `${dateStr}_${act.id}`;
+      const val = activityLogs[key];
+      if (act.type === 'star') totalValue += ((val as number) || 0) / (act.starCount || 5);
+      else if (val) totalValue += 1;
+      count++;
+    });
+    return count === 0 ? 0 : (totalValue / count) * 100;
+  };
+
+  const getMonthScore = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+    let totalValue = 0;
+    let count = 0;
+    activities.forEach(act => {
+      for(let d=1; d<=daysInMonth; d++) {
+        const key = `${monthStr}-${String(d).padStart(2, '0')}_${act.id}`;
+        const val = activityLogs[key];
+        if (act.type === 'star') totalValue += ((val as number) || 0) / (act.starCount || 5);
+        else if (val) totalValue += 1;
+        count++;
+      }
+    });
+    return count === 0 ? 0 : (totalValue / count) * 100;
+  };
+
+  const getStatsTrendData = () => {
+    const data: any[] = [];
+    const today = currentProtocolDate;
+    
+    if (habitStatsRange === '1m') {
+      const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      
+      for (let i = 1; i <= daysInMonth; i++) {
+        const d_curr = new Date(today.getFullYear(), today.getMonth(), i);
+        const d_prev = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), i);
+        
+        data.push({
+          day: i,
+          thisMonth: Math.round(getDayScore(d_curr)),
+          lastMonth: Math.round(getDayScore(d_prev))
+        });
+      }
+    } else {
+      let months = 3;
+      if (habitStatsRange === '6m') months = 6;
+      if (habitStatsRange === '1y') months = 12;
+      
+      for (let i = months - 1; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const name = d.toLocaleDateString('en-US', { month: 'short' });
+        data.push({
+          name,
+          score: Math.round(getMonthScore(d))
+        });
+      }
+    }
+    return data;
+  };
 
   // Firebase Auth Listener
   useEffect(() => {
@@ -1422,8 +1652,54 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center">
-      <div className="w-full max-w-2xl min-h-screen bg-app-bg text-app-green font-sans pb-20 overflow-x-hidden shadow-2xl relative">
+    <div className="flex flex-col h-screen bg-app-bg text-[#1B4332] font-sans antialiased overflow-hidden selection:bg-app-green/10">
+      {/* Splash Screen (Enter Page) */}
+      <AnimatePresence>
+        {isSplashScreenVisible && (
+          <motion.div 
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-gradient-to-br from-[#1B4332] to-[#0D1F17] flex flex-col items-center justify-center p-8 text-white"
+          >
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5, type: 'spring' }}
+              className="w-32 h-32 bg-white/10 backdrop-blur-xl rounded-[40px] flex items-center justify-center mb-8 relative"
+            >
+              <div className="absolute inset-0 bg-white/5 rounded-[40px] blur-2xl animate-pulse" />
+              <div className="relative">
+                <LayoutDashboard className="w-16 h-16 text-emerald-400" />
+              </div>
+            </motion.div>
+            
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              className="text-center"
+            >
+              <h1 className="text-4xl font-black tracking-tighter mb-2">MyLife</h1>
+              <p className="text-emerald-400/60 font-medium uppercase tracking-[0.3em] text-[10px]">Lifestyle OS</p>
+            </motion.div>
+
+            <motion.div 
+               initial={{ width: 0 }}
+               animate={{ width: 120 }}
+               transition={{ delay: 0.8, duration: 1.5, ease: 'easeInOut' }}
+               className="h-1 bg-white/20 mt-12 rounded-full overflow-hidden"
+            >
+               <motion.div 
+                 animate={{ x: [-120, 120] }}
+                 transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                 className="h-full w-24 bg-gradient-to-r from-transparent via-emerald-400 to-transparent"
+               />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex flex-col h-full w-full max-w-2xl mx-auto shadow-2xl relative bg-app-bg overflow-hidden">
         {/* Header */}
         {!isLocked && (
         <header className="px-4 py-3 flex justify-between items-center bg-[#FDFDF0] sticky top-0 z-30">
@@ -1529,6 +1805,7 @@ export default function App() {
                 </div>
                 
                 <div className="flex-1 overflow-y-auto py-4">
+                  <SidebarItem icon={<ListTodo className="w-5 h-5 text-blue-600" />} label="Daily Routine & Habits" sublabel="রুটিন ও অভ্যাস" onClick={() => { setHabitViewTab('home'); setIsActivityProtocolOpen(true); setIsSidebarOpen(false); }} />
                   <SidebarItem icon={<SettingsIcon className="w-5 h-5" />} label="Preferences" onClick={() => { setIsPreferencesOpen(true); setIsSidebarOpen(false); }} />
                   
                   <div className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider opacity-40 mt-2">Management</div>
@@ -1725,6 +2002,827 @@ export default function App() {
               </SettingsSection>
             </div>
           </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Activity Protocol (Unified Habit Tracker & Notes) */}
+      <AnimatePresence>
+        {isActivityProtocolOpen && (
+          <div className="fixed inset-0 bg-black/40 z-[60] flex justify-center items-center">
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              className="w-full max-w-4xl h-full bg-[#f1f4f8] flex flex-col shadow-2xl overflow-hidden"
+              style={{ fontSize: `${habitUIScale}rem` }}
+            >
+              <header className="px-4 py-3 flex items-center justify-between bg-white border-b border-gray-100 z-30">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setIsActivityProtocolOpen(false)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                    <ArrowLeft className="w-5 h-5 text-[#1a2d42]" />
+                  </button>
+                  <div>
+                    <h1 className="text-base font-black text-[#1a2d42] leading-none mb-1">
+                      {habitViewTab === 'home' ? 'Daily Routine' : habitViewTab === 'progress' ? 'Insights & Progress' : 'Habit Settings'}
+                    </h1>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                      {habitViewTab === 'home' ? 'দৈনিক ট্র্যাকার' : habitViewTab === 'progress' ? 'উন্নতি ও পরিসংখ্যান' : 'কলাম ও সেটিংস'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <div className="relative mr-2 hidden sm:block">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Search..."
+                      value={searchQueryProtocol}
+                      onChange={(e) => setSearchQueryProtocol(e.target.value)}
+                      className="bg-gray-100 rounded-xl pl-9 pr-3 py-2 text-[10px] w-28 focus:outline-none focus:ring-2 focus:ring-blue-100 font-bold"
+                    />
+                  </div>
+                  <button onClick={() => setIsActivityProtocolOpen(false)} className="p-2.5 bg-gray-50 text-gray-400 hover:text-red-500 rounded-xl transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </header>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#f8fafc] pb-32">
+                <div id="habits-capture-area" className="px-4 py-6 space-y-8 max-w-3xl mx-auto">
+                  
+                  {habitViewTab === 'home' && (
+                    <div className="space-y-8 animate-in fade-in duration-500">
+                       <section>
+                         <div className="flex items-center justify-between mb-4">
+                            <div>
+                              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-[0.2em]">Summary</p>
+                              <h2 className="text-xl font-black text-[#1a2d42]">Daily Score</h2>
+                            </div>
+                            <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
+                               <button onClick={() => {
+                                  const d = new Date(currentProtocolDate);
+                                  d.setMonth(d.getMonth() - 1);
+                                  setCurrentProtocolDate(d);
+                               }} className="p-1.5 hover:bg-gray-50 rounded-lg"><ChevronLeft className="w-4 h-4 text-gray-400" /></button>
+                               <span className="text-[11px] font-black text-[#1a2d42] min-w-[80px] text-center">
+                                 {currentProtocolDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                               </span>
+                               <button onClick={() => {
+                                  const d = new Date(currentProtocolDate);
+                                  d.setMonth(d.getMonth() + 1);
+                                  setCurrentProtocolDate(d);
+                               }} className="p-1.5 hover:bg-gray-50 rounded-lg"><ChevronRight className="w-4 h-4 text-gray-400" /></button>
+                            </div>
+                         </div>
+
+                         <div className="grid grid-cols-2 gap-3">
+                           <div className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-100">
+                             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Completion</p>
+                             <div className="flex items-end justify-between">
+                               <p className="text-3xl font-black text-blue-600">{Math.round(getMonthScore(currentProtocolDate))}%</p>
+                               <TrendingUp className="w-5 h-5 text-blue-400" />
+                             </div>
+                           </div>
+                           <div className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-100 text-emerald-600">
+                             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Status</p>
+                             <div className="flex items-end justify-between">
+                               <p className="text-3xl font-black uppercase tracking-tighter">Elite</p>
+                               <Trophy className="w-5 h-5" />
+                             </div>
+                           </div>
+                         </div>
+                       </section>
+
+                       <section>
+                         <div className="flex items-center justify-between mb-4 px-1">
+                            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tracking Board</h3>
+                            <button 
+                              onClick={() => setProtocolTrackerMode(protocolTrackerMode === 'daily' ? 'monthly' : 'daily')}
+                              className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest"
+                            >
+                              {protocolTrackerMode === 'daily' ? 'View Month' : 'View Day'}
+                            </button>
+                         </div>
+
+                         {protocolTrackerMode === 'daily' ? (
+                            <div className="space-y-4">
+                               <div className="overflow-x-auto no-scrollbar -mx-4 px-4 py-2">
+                                  <div className="flex gap-2.5">
+                                     {(() => {
+                                       const year = currentProtocolDate.getFullYear();
+                                       const month = currentProtocolDate.getMonth();
+                                       const daysInMonth = new Date(year, month + 1, 0).getDate();
+                                       return Array.from({ length: daysInMonth }, (_, i) => {
+                                         const d = i + 1;
+                                         const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                                         const dateObj = new Date(year, month, d);
+                                         const isSelected = selectedProtocolDay === dateKey;
+                                         const isToday = new Date().toDateString() === dateObj.toDateString();
+                                         return (
+                                           <button 
+                                             key={d}
+                                             onClick={() => setSelectedProtocolDay(dateKey)}
+                                             className={cn(
+                                               "flex flex-col items-center justify-center w-12 h-16 rounded-2xl transition-all border shrink-0",
+                                               isSelected ? "bg-[#1a2d42] border-[#1a2d42] text-white shadow-xl scale-105" :
+                                               isToday ? "bg-white border-blue-200 text-[#1a2d42]" : "bg-white border-gray-100 text-gray-400 hover:border-blue-100"
+                                             )}
+                                           >
+                                             <span className="text-[8px] font-bold uppercase mb-1 opacity-60">{dateObj.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                                             <span className="text-sm font-black">{d}</span>
+                                           </button>
+                                         );
+                                       });
+                                     })()}
+                                  </div>
+                               </div>
+
+                               <div className="grid gap-3">
+                                  {activities.filter(a => a.name.toLowerCase().includes(searchQueryProtocol.toLowerCase())).map(act => {
+                                    const logKey = `${selectedProtocolDay}_${act.id}`;
+                                    const val = activityLogs[logKey];
+                                    return (
+                                      <motion.div layout key={act.id} className="bg-white rounded-[32px] p-4 flex items-center justify-between shadow-sm border border-gray-100">
+                                        <div className="flex items-center gap-4">
+                                           <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-[#1a2d42] border border-gray-100">
+                                             <IconDisplay icon={act.icon} customIcon={act.iconUrl} className="w-6 h-6" />
+                                           </div>
+                                           <div>
+                                             <p className="text-sm font-black text-[#1a2d42] leading-none mb-1">{act.name}</p>
+                                             <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{act.type}</p>
+                                           </div>
+                                        </div>
+                                        {act.type === 'boolean' ? (
+                                           <button 
+                                             onClick={() => toggleActivityLog(logKey)} 
+                                             className={cn(
+                                               "w-12 h-12 rounded-2xl border-2 transition-all flex items-center justify-center", 
+                                               val ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100" : "bg-gray-50 border-gray-100 text-gray-200"
+                                             )}
+                                           >
+                                             <Check className={cn("w-6 h-6 stroke-[3]", !val && "opacity-0")} />
+                                           </button>
+                                        ) : act.type === 'number' ? (
+                                           <div className="flex items-center gap-2">
+                                              <input 
+                                                type="number" 
+                                                value={val || ''} 
+                                                onChange={(e) => toggleActivityLog(logKey, parseFloat(e.target.value) || 0)}
+                                                className="w-16 bg-gray-50 border border-gray-100 rounded-xl px-3 py-3 text-center text-sm font-black text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                                placeholder="0"
+                                              />
+                                           </div>
+                                        ) : (
+                                           <div className="flex gap-1.5">
+                                              {Array.from({ length: act.starCount || 5 }, (_, i) => i + 1).map(star => (
+                                                <button key={star} onClick={() => toggleActivityLog(logKey, star)} className="transition-all active:scale-150">
+                                                  <Star className={cn("w-5 h-5", (val as number) >= star ? "fill-yellow-400 text-yellow-400" : "text-gray-100")} />
+                                                </button>
+                                              ))}
+                                           </div>
+                                        )}
+                                      </motion.div>
+                                    );
+                                  })}
+                               </div>
+                            </div>
+                         ) : (
+                            <div className="bg-white rounded-[32px] shadow-sm overflow-x-auto border border-gray-100 p-2">
+                               <table className="w-full text-center border-collapse">
+                                 <thead>
+                                   <tr className="border-b border-gray-100">
+                                     <th className="sticky left-0 bg-white p-4 text-[9px] font-black text-gray-400 uppercase text-left border-r min-w-[120px]">Habit Matrix</th>
+                                     {Array.from({ length: new Date(currentProtocolDate.getFullYear(), currentProtocolDate.getMonth() + 1, 0).getDate() }, (_, i) => (
+                                       <th key={i} className="p-3 text-[9px] font-extrabold text-gray-400 border-r">{i+1}</th>
+                                     ))}
+                                   </tr>
+                                 </thead>
+                                 <tbody>
+                                   {activities.map(act => (
+                                     <tr key={act.id} className="border-t border-gray-50/50">
+                                       <td className="sticky left-0 bg-white p-4 text-[11px] font-black text-[#1a2d42] text-left border-r bg-white/95 backdrop-blur-sm z-10">{act.name}</td>
+                                       {Array.from({ length: new Date(currentProtocolDate.getFullYear(), currentProtocolDate.getMonth() + 1, 0).getDate() }, (_, i) => {
+                                         const dateKey = `${currentProtocolDate.getFullYear()}-${String(currentProtocolDate.getMonth() + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+                                         const logKey = `${dateKey}_${act.id}`;
+                                         const val = activityLogs[logKey];
+                                         return (
+                                           <td key={i} className="p-1 border-r last:border-r-0 text-center">
+                                             {act.type === 'boolean' ? (
+                                               <button onClick={() => toggleActivityLog(logKey)} className={cn("w-4 h-4 rounded-md mx-auto transition-all", val ? "bg-blue-600 shadow-sm" : "bg-gray-100")} />
+                                             ) : act.type === 'number' ? (
+                                               <span className={cn("text-[8px] font-black", val ? "text-blue-600" : "text-gray-200")}>{val || '-'}</span>
+                                             ) : (
+                                               <div className="flex items-center justify-center">
+                                                 <Star className={cn("w-3 h-3 mx-auto", (val as number) >= (act.starCount || 5)/2 ? "fill-yellow-400 text-yellow-400" : "text-gray-100")} />
+                                               </div>
+                                             )}
+                                           </td>
+                                         );
+                                       })}
+                                     </tr>
+                                   ))}
+                                 </tbody>
+                               </table>
+                            </div>
+                         )}
+                       </section>
+
+                    </div>
+                  )}
+
+                  {habitViewTab === 'progress' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <section className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100">
+                        <div className="flex items-center justify-between mb-8">
+                          <div>
+                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-[0.2em]">Insights</p>
+                            <h3 className="text-xl font-black text-[#1a2d42]">Success Trend</h3>
+                          </div>
+                          <div className="flex gap-1 bg-gray-50 p-1 rounded-2xl border border-gray-100">
+                            {(['1m', '3m', '6m', '1y'] as const).map(r => (
+                              <button 
+                                key={r}
+                                onClick={() => setHabitStatsRange(r)}
+                                className={cn(
+                                  "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase transition-all",
+                                  habitStatsRange === r ? "bg-white text-blue-600 shadow-sm border border-gray-100" : "text-gray-400 hover:text-gray-600"
+                                )}
+                              >
+                                {r}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="h-72 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            {habitStatsRange === '1m' ? (
+                              <LineChart data={getStatsTrendData()} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} unit="%" domain={[0, 100]} />
+                                <Tooltip 
+                                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', fontSize: '10px', fontWeight: '800' }}
+                                  cursor={{ stroke: '#f1f5f9', strokeWidth: 2 }}
+                                />
+                                <Line type="monotone" dataKey="thisMonth" name="This Month" stroke="#2563eb" strokeWidth={4} dot={false} activeDot={{ r: 6, fill: '#2563eb', stroke: '#fff', strokeWidth: 3 }} animationDuration={1000} />
+                                <Line type="monotone" dataKey="lastMonth" name="Last Month" stroke="#f1f5f9" strokeWidth={4} dot={false} animationDuration={1000} />
+                              </LineChart>
+                            ) : (
+                               <AreaChart data={getStatsTrendData()} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                <defs>
+                                  <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
+                                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                                  </linearGradient>
+                                </defs>
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} unit="%" domain={[0, 100]} />
+                                <Tooltip 
+                                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', fontSize: '10px', fontWeight: '800' }}
+                                />
+                                <Area type="monotone" dataKey="score" name="Score" stroke="#2563eb" fillOpacity={1} fill="url(#colorScore)" strokeWidth={4} animationDuration={1000} />
+                              </AreaChart>
+                            )}
+                          </ResponsiveContainer>
+                        </div>
+                      </section>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                         <div className="bg-white p-7 rounded-[32px] border border-gray-100 shadow-sm text-center">
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Health Score</p>
+                            <p className="text-4xl font-black text-blue-600">89%</p>
+                         </div>
+                         <div className="bg-white p-7 rounded-[32px] border border-gray-100 shadow-sm text-center">
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Consistency</p>
+                            <p className="text-4xl font-black text-emerald-600">92%</p>
+                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {habitViewTab === 'settings' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+                       <section className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100">
+                          <div className="flex items-center justify-between mb-8">
+                             <div>
+                               <p className="text-[9px] text-gray-400 font-bold uppercase tracking-[0.2em]">Customization</p>
+                               <h3 className="text-xl font-black text-[#1a2d42]">Manage Habits</h3>
+                             </div>
+                             <button 
+                               onClick={() => {
+                                 const newHabit = {
+                                   id: Math.random().toString(36).substr(2, 9),
+                                   name: 'NEW HABIT',
+                                   icon: 'CheckCircle2',
+                                   type: 'boolean' as const
+                                 };
+                                 setActivities([...activities, newHabit]);
+                                 setEditingActivityId(newHabit.id);
+                               }}
+                               className="px-5 py-3 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-100 active:scale-95 transition-all"
+                             >
+                               <Plus className="w-4 h-4 inline-block mr-1" />
+                               Add New
+                             </button>
+                          </div>
+
+                          <div className="grid gap-3">
+                             {activities.map((act) => (
+                               <div key={act.id} className="bg-gray-50/50 rounded-[32px] border border-gray-100 overflow-hidden">
+                                  <div 
+                                    className="p-5 flex items-center justify-between cursor-pointer hover:bg-white transition-all"
+                                    onClick={() => setEditingActivityId(editingActivityId === act.id ? null : act.id)}
+                                  >
+                                     <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#1a2d42] border border-gray-100 shadow-sm">
+                                           <IconDisplay icon={act.icon} customIcon={act.iconUrl} className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                           <p className="text-sm font-black text-[#1a2d42]">{act.name}</p>
+                                           <p className="text-[9px] font-bold text-gray-300 uppercase leading-none mt-1">{act.type}</p>
+                                        </div>
+                                     </div>
+                                     <div className="flex items-center gap-1">
+                                        <button className="p-2.5 text-blue-600 bg-white border border-gray-100 rounded-xl shadow-xs"><SettingsIcon className="w-4 h-4" /></button>
+                                        <button 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if(confirm('Delete this habit?')) setActivities(activities.filter(a => a.id !== act.id));
+                                          }} 
+                                          className="p-2.5 text-red-500 bg-white border border-gray-100 rounded-xl shadow-xs"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                     </div>
+                                  </div>
+
+                                  <AnimatePresence>
+                                    {editingActivityId === act.id && (
+                                      <motion.div 
+                                        initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
+                                        className="px-6 pb-6 pt-2 space-y-6 border-t border-gray-100 bg-white/50"
+                                      >
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-[#1a2d42]">Label Name</label>
+                                            <input 
+                                              value={act.name}
+                                              onChange={(e) => setActivities(activities.map(a => a.id === act.id ? { ...a, name: e.target.value.toUpperCase() } : a))}
+                                              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-blue-100 outline-none"
+                                            />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-[#1a2d42]">Metric Type</label>
+                                            <select 
+                                              value={act.type}
+                                              onChange={(e) => {
+                                                const newType = e.target.value as any;
+                                                setActivities(activities.map(a => a.id === act.id ? { ...a, type: newType, starCount: newType === 'star' ? (a.starCount || 5) : undefined } : a));
+                                              }}
+                                              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-xs font-bold"
+                                            >
+                                              <option value="boolean">Checkmark</option>
+                                              <option value="star">Rating System</option>
+                                              <option value="number">Numeric Input</option>
+                                            </select>
+                                          </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                          <p className="text-[10px] font-black text-[#1a2d42] uppercase tracking-widest">Icon Library</p>
+                                          <div className="grid grid-cols-7 gap-2 bg-white p-4 rounded-3xl border border-gray-100 max-h-48 overflow-y-auto custom-scrollbar">
+                                            {HABIT_ICONS.map(i => (
+                                              <button 
+                                                key={i} 
+                                                onClick={() => setActivities(activities.map(a => a.id === act.id ? { ...a, icon: i, iconUrl: undefined } : a))}
+                                                className={cn("w-10 h-10 flex items-center justify-center rounded-2xl transition-all", act.icon === i && !act.iconUrl ? "bg-[#1a2d42] text-white shadow-lg" : "bg-gray-50 text-gray-400 hover:bg-gray-100")}
+                                              >
+                                                <IconDisplay icon={i} className="w-5 h-5" />
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                               </div>
+                             ))}
+                          </div>
+                       </section>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Fixed Bottom NavigationBar */}
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[85%] max-w-[280px] bg-[#1a2d42]/90 backdrop-blur-2xl rounded-[32px] p-1.5 shadow-[0_15px_40px_rgba(0,0,0,0.3)] border border-white/5 flex items-center justify-between z-[100]">
+                <button 
+                  onClick={() => setHabitViewTab('home')}
+                  className={cn(
+                    "flex-1 flex flex-col items-center gap-1 py-2 rounded-[28px] transition-all relative",
+                    habitViewTab === 'home' ? "bg-white text-[#1a2d42] shadow-lg" : "text-white/40 hover:text-white"
+                  )}
+                >
+                  <Home className="w-4 h-4" />
+                  <span className="text-[7px] font-black uppercase tracking-[0.1em]">Home</span>
+                  {habitViewTab === 'home' && <motion.div layoutId="sub-tab" className="absolute -top-1 w-4 h-0.5 bg-blue-400 rounded-full" />}
+                </button>
+                
+                <button 
+                  onClick={() => setHabitViewTab('settings')}
+                  className={cn(
+                    "flex-1 flex flex-col items-center gap-1 py-2 rounded-[28px] transition-all relative",
+                    habitViewTab === 'settings' ? "bg-white text-[#1a2d42] shadow-lg" : "text-white/40 hover:text-white"
+                  )}
+                >
+                  <ListPlus className="w-4 h-4" />
+                  <span className="text-[7px] font-black uppercase tracking-[0.1em]">Build</span>
+                  {habitViewTab === 'settings' && <motion.div layoutId="sub-tab" className="absolute -top-1 w-4 h-0.5 bg-blue-400 rounded-full" />}
+                </button>
+
+                <button 
+                  onClick={() => setHabitViewTab('progress')}
+                  className={cn(
+                    "flex-1 flex flex-col items-center gap-1 py-2 rounded-[28px] transition-all relative",
+                    habitViewTab === 'progress' ? "bg-white text-[#1a2d42] shadow-lg" : "text-white/40 hover:text-white"
+                  )}
+                >
+                  <PieChart className="w-4 h-4" />
+                  <span className="text-[7px] font-black uppercase tracking-[0.1em]">Stats</span>
+                  {habitViewTab === 'progress' && <motion.div layoutId="sub-tab" className="absolute -top-1 w-4 h-0.5 bg-blue-400 rounded-full" />}
+                </button>
+              </div>
+
+              {/* Redesigned Habit Settings Modal as per image */}
+              <AnimatePresence>
+                {isHabitSettingsOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6 bg-[#0a0a0b]/40 backdrop-blur-md"
+                    onClick={() => setIsHabitSettingsOpen(false)}
+                  >
+                    <motion.div 
+                      initial={{ scale: 0.95 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0.95 }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full max-w-[480px] bg-white rounded-[40px] shadow-2xl shadow-black/10 overflow-hidden flex flex-col max-h-[90vh]"
+                    >
+                      {/* Pull Indicator */}
+                      <div className="flex justify-center pt-4">
+                        <div className="w-12 h-1.5 bg-gray-100 rounded-full" />
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto custom-scrollbar px-8 pb-8 pt-4 space-y-10">
+                        {/* Title */}
+                        <h1 className="text-3xl font-black text-[#1a2d42] tracking-tight">Habit Settings</h1>
+
+                        {/* DOWNLOAD DATA Section */}
+                        <section className="space-y-6">
+                          <div className="space-y-1">
+                            <h2 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em]">Download Data</h2>
+                            <p className="text-[9px] text-blue-600/60 font-black uppercase tracking-widest">ডেটা ডাউনলোড</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <button 
+                              onClick={() => {
+                                const captureArea = document.getElementById('habits-capture-area');
+                                if (captureArea) {
+                                  import('html2canvas').then(m => m.default(captureArea, { scale: 2 }).then(canvas => {
+                                    import('jspdf').then(j => {
+                                      const pdf = new j.jsPDF('p', 'mm', 'a4');
+                                      const pdfWidth = pdf.internal.pageSize.getWidth();
+                                      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, (canvas.height * pdfWidth) / canvas.width);
+                                      pdf.save(`Protocol_${new Date().toISOString().split('T')[0]}.pdf`);
+                                    });
+                                  }));
+                                }
+                              }}
+                              className="group p-6 bg-[#f8f9fb] rounded-[32px] flex flex-col items-center gap-3 transition-all hover:bg-[#f0f2f5] active:scale-95"
+                            >
+                              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-600 shadow-sm transition-all group-hover:scale-110">
+                                <FileDown className="w-6 h-6" />
+                              </div>
+                              <span className="text-[11px] font-black text-[#1a2d42] uppercase tracking-wider">PDF Export</span>
+                            </button>
+                            <button className="group p-6 bg-[#f8f9fb] rounded-[32px] flex flex-col items-center gap-3 transition-all hover:bg-[#f0f2f5] active:scale-95">
+                              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-400 shadow-sm transition-all group-hover:scale-110">
+                                <Share2 className="w-6 h-6" />
+                              </div>
+                              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">Share Stats</span>
+                            </button>
+                          </div>
+                        </section>
+
+                        {/* DISPLAY & NAVIGATION Section */}
+                        <section className="space-y-6">
+                          <div className="space-y-1">
+                            <h2 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em]">Display & Navigation</h2>
+                            <p className="text-[9px] text-blue-600/60 font-black uppercase tracking-widest">ডিসপ্লে এবং নেভিগেশন</p>
+                          </div>
+                          <div className="bg-[#f8f9fb] rounded-[32px] p-6 space-y-8">
+                            {/* Layout Mode Toggler */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-black text-[#1a2d42]">Layout Mode</span>
+                              <div className="bg-white p-1 rounded-2xl flex shadow-sm border border-gray-100">
+                                <button 
+                                  onClick={() => setProtocolTrackerMode('daily')}
+                                  className={cn(
+                                    "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                    protocolTrackerMode === 'daily' ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-gray-400 hover:text-[#1a2d42]"
+                                  )}
+                                >
+                                  Daily
+                                </button>
+                                <button 
+                                  onClick={() => setProtocolTrackerMode('monthly')}
+                                  className={cn(
+                                    "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                    protocolTrackerMode === 'monthly' ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "text-gray-400 hover:text-[#1a2d42]"
+                                  )}
+                                >
+                                  Monthly
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Year Selector */}
+                            <div className="flex items-center justify-between pt-4 border-t border-gray-200/50">
+                              <span className="text-sm font-black text-[#1a2d42]">Select Year</span>
+                              <div className="flex items-center gap-6">
+                                <button 
+                                  onClick={() => setCurrentProtocolDate(new Date(currentProtocolDate.getFullYear() - 1, currentProtocolDate.getMonth(), 1))}
+                                  className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-90"
+                                >
+                                  <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                <span className="text-lg font-black text-blue-600 tabular-nums">{currentProtocolDate.getFullYear()}</span>
+                                <button 
+                                  onClick={() => setCurrentProtocolDate(new Date(currentProtocolDate.getFullYear() + 1, currentProtocolDate.getMonth(), 1))}
+                                  className="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all active:scale-90"
+                                >
+                                  <ChevronRight className="w-5 h-5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Month Selector */}
+                            <div className="pt-4 border-t border-gray-200/50 space-y-4">
+                              <span className="text-sm font-black text-[#1a2d42]">Select Month</span>
+                              <div className="grid grid-cols-4 gap-2">
+                                {Array.from({ length: 12 }, (_, i) => {
+                                  const d = new Date(currentProtocolDate.getFullYear(), i, 1);
+                                  const isActive = currentProtocolDate.getMonth() === i;
+                                  return (
+                                    <button 
+                                      key={i}
+                                      onClick={() => setCurrentProtocolDate(new Date(currentProtocolDate.getFullYear(), i, 1))}
+                                      className={cn(
+                                        "py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", 
+                                        isActive 
+                                          ? "bg-blue-600 text-white shadow-lg shadow-blue-100" 
+                                          : "bg-white border border-gray-100 text-gray-400 hover:bg-gray-50"
+                                      )}
+                                    >
+                                      {d.toLocaleDateString('en-US', { month: 'short' })}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+
+                        {/* UI SCALE Section */}
+                        <section className="space-y-6">
+                          <div className="space-y-1">
+                            <h2 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em]">UI Scale (Appearance)</h2>
+                            <p className="text-[9px] text-blue-600/60 font-black uppercase tracking-widest">ইউআই সাইজ পরিবর্তন</p>
+                          </div>
+                          <div className="bg-[#f8f9fb] rounded-[32px] p-8 space-y-4">
+                            <div className="flex items-center gap-6">
+                              <div className="text-gray-400"><Scaling className="w-5 h-5" /></div>
+                              <input 
+                                type="range" 
+                                min="0.7" 
+                                max="1.3" 
+                                step="0.05" 
+                                value={habitUIScale}
+                                onChange={(e) => setHabitUIScale(parseFloat(e.target.value))}
+                                className="flex-1 accent-blue-600 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                              />
+                              <div className="text-gray-400"><Maximize className="w-5 h-5" /></div>
+                            </div>
+                            <p className="text-center text-[10px] font-black uppercase text-blue-600 tracking-widest">
+                              {Math.round(habitUIScale * 100)}% Standard Size
+                            </p>
+                          </div>
+                        </section>
+
+                        {/* COLUMN MANAGEMENT Section (Requested by user) */}
+                        <section className="space-y-6 pb-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <h2 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em]">Columns (Edit & Add)</h2>
+                              <button 
+                                onClick={() => {
+                                  const newActivity = { id: `act_${Date.now()}`, name: 'NEW COLUMN', icon: 'Plus', type: 'boolean' as const };
+                                  setActivities([...activities, newActivity]);
+                                  setEditingActivityId(newActivity.id);
+                                }}
+                                className="px-4 py-1.5 bg-[#1a2d42] text-white rounded-full text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all hover:bg-blue-600"
+                              >
+                                Add New
+                              </button>
+                            </div>
+                            <p className="text-[9px] text-blue-600/60 font-black uppercase tracking-widest">কলাম ম্যানেজমেন্ট</p>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            {activities.map(act => (
+                              <div key={act.id} className="bg-[#f8f9fb] rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                                <div className="p-4 flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                                      <IconDisplay icon={act.icon} customIcon={act.iconUrl} className="w-4 h-4 text-[#1a2d42]" />
+                                    </div>
+                                    <span className="text-sm font-black text-[#1a2d42]">{act.name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <button 
+                                      onClick={() => setEditingActivityId(editingActivityId === act.id ? null : act.id)}
+                                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                    >
+                                      <Edit3 className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                      onClick={() => setActivities(activities.filter(a => a.id !== act.id))}
+                                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <AnimatePresence>
+                                  {editingActivityId === act.id && (
+                                    <motion.div 
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      className="border-t border-gray-100 bg-white/50 p-6 space-y-4"
+                                    >
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                          <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Name</label>
+                                          <input 
+                                            type="text" 
+                                            value={act.name}
+                                            onChange={(e) => {
+                                              setActivities(activities.map(a => a.id === act.id ? { ...a, name: e.target.value.toUpperCase() } : a));
+                                            }}
+                                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all uppercase"
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-[9px] font-black uppercase tracking-widest text-gray-400">Type</label>
+                                          <select 
+                                            value={act.type}
+                                            onChange={(e) => {
+                                              const newType = e.target.value as any;
+                                              setActivities(activities.map(a => a.id === act.id ? { ...a, type: newType, starCount: newType === 'star' ? (a.starCount || 5) : undefined } : a));
+                                            }}
+                                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                                          >
+                                            <option value="boolean">Checkbox</option>
+                                            <option value="star">Star Rating</option>
+                                            <option value="number">Number</option>
+                                          </select>
+                                        </div>
+                                      </div>
+
+                                      {act.type === 'star' && (
+                                        <div className="space-y-3 bg-blue-50/50 p-6 rounded-[28px] border border-blue-100/50">
+                                          <div className="flex items-center justify-between mb-2">
+                                            <div className="space-y-0.5">
+                                              <label className="text-[10px] font-black uppercase tracking-widest text-[#1a2d42]">Max stars count</label>
+                                              <p className="text-[8px] text-blue-600/60 font-medium uppercase tracking-wider">ইস্টারের সংখ্যা দিন</p>
+                                            </div>
+                                            <span className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-black shadow-lg shadow-blue-100">
+                                              {act.starCount || 5}
+                                            </span>
+                                          </div>
+                                          <div className="relative flex items-center gap-4">
+                                            <input 
+                                              type="range" 
+                                              min="1" 
+                                              max="15" 
+                                              step="1"
+                                              value={act.starCount || 5}
+                                              onChange={(e) => {
+                                                const val = parseInt(e.target.value);
+                                                setActivities(activities.map(a => a.id === act.id ? { ...a, starCount: val } : a));
+                                              }}
+                                              className="flex-1 accent-blue-600 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                            <input 
+                                              type="number"
+                                              min="1"
+                                              max="20"
+                                              value={act.starCount || 5}
+                                              onChange={(e) => {
+                                                const val = parseInt(e.target.value) || 1;
+                                                setActivities(activities.map(a => a.id === act.id ? { ...a, starCount: Math.min(Math.max(val, 1), 20) } : a));
+                                              }}
+                                              className="w-14 bg-white border border-gray-200 rounded-xl px-2 py-2 text-center text-sm font-black text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      <div className="space-y-3">
+                                        <div className="flex items-center justify-between px-1">
+                                          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Select Icon</label>
+                                          <p className="text-[8px] text-blue-600 font-bold uppercase tracking-wider">আইকন পরিবর্তন করুন</p>
+                                        </div>
+                                        <div className="grid grid-cols-6 gap-2 bg-white/80 p-3 rounded-[24px] border border-gray-100 max-h-36 overflow-y-auto custom-scrollbar">
+                                          {HABIT_ICONS.map(iconName => (
+                                            <button
+                                              key={iconName}
+                                              onClick={() => {
+                                                setActivities(activities.map(a => a.id === act.id ? { ...a, icon: iconName, iconUrl: undefined } : a));
+                                              }}
+                                              className={cn(
+                                                "w-full aspect-square flex items-center justify-center rounded-xl transition-all",
+                                                act.icon === iconName && !act.iconUrl ? "bg-blue-600 text-white shadow-lg shadow-blue-100 scale-110" : "bg-gray-50 text-gray-400 hover:bg-white hover:border-blue-200 border border-transparent"
+                                              )}
+                                            >
+                                              <IconDisplay icon={iconName} className="w-5 h-5" />
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <div className="flex items-center justify-between px-1">
+                                          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Custom Icon URL</label>
+                                          <p className="text-[8px] text-blue-600/60 font-medium uppercase tracking-wider">অথবা ওয়েব লিংক দিন</p>
+                                        </div>
+                                        <input 
+                                          type="text" 
+                                          placeholder="https://..."
+                                          value={act.iconUrl || ''}
+                                          onChange={(e) => {
+                                            setActivities(activities.map(a => a.id === act.id ? { ...a, iconUrl: e.target.value } : a));
+                                          }}
+                                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                                        />
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            ))}
+
+                            <button
+                              onClick={() => {
+                                const newHabit = {
+                                  id: Math.random().toString(36).substr(2, 9),
+                                  name: 'NEW HABIT',
+                                  icon: 'CheckCircle2',
+                                  type: 'boolean' as const
+                                };
+                                setActivities([...activities, newHabit]);
+                                setEditingActivityId(newHabit.id);
+                              }}
+                              className="w-full py-4 bg-white border-2 border-dashed border-gray-200 rounded-[28px] text-gray-400 font-black uppercase tracking-widest text-[10px] flex flex-col items-center justify-center gap-2 hover:border-emerald-200 hover:text-emerald-500 hover:bg-emerald-50 transition-all group"
+                            >
+                              <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center group-hover:bg-white group-hover:shadow-lg transition-all">
+                                <Plus className="w-6 h-6" />
+                              </div>
+                              <span>নতুন অভ্যাস যোগ করুন (Add New Habit)</span>
+                            </button>
+                          </div>
+                        </section>
+                      </div>
+
+                      {/* Footer Close Button */}
+                      <div className="p-8 pt-0 mt-auto">
+                        <button 
+                          onClick={() => setIsHabitSettingsOpen(false)}
+                          className="w-full py-5 bg-[#1a2d42] text-white rounded-[24px] text-base font-black uppercase tracking-widest shadow-xl shadow-[#1a2d42]/20 hover:bg-[#25394f] transition-all active:scale-[0.98]"
+                        >
+                          Close Settings
+                        </button>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>
@@ -4038,11 +5136,16 @@ function DetailItem({ label, value }: { label: string, value: string }) {
   );
 }
 
-function SidebarItem({ icon, label, onClick }: { icon: React.ReactNode, label: string, onClick?: () => void }) {
+function SidebarItem({ icon, label, sublabel, onClick }: { icon: React.ReactNode, label: string, sublabel?: string, onClick?: () => void }) {
   return (
-    <button onClick={onClick} className="w-full flex items-center gap-6 px-6 py-4 hover:bg-app-green/5 transition-colors">
-      <span className="opacity-70">{icon}</span>
-      <span className="text-sm font-medium">{label}</span>
+    <button onClick={onClick} className="w-full flex items-center gap-4 px-6 py-4 hover:bg-app-green/5 transition-all text-left">
+      <div className="w-10 h-10 shrink-0 rounded-2xl bg-white shadow-sm flex items-center justify-center border border-gray-100">
+        {icon}
+      </div>
+      <div>
+        <p className="text-sm font-bold tracking-tight text-[#1B4332]">{label}</p>
+        {sublabel && <p className="text-[10px] font-black text-app-green/60 uppercase tracking-widest mt-1 leading-none">{sublabel}</p>}
+      </div>
     </button>
   );
 }
